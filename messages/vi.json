@@ -1,0 +1,135 @@
+{
+  "Errors": {
+    "LoginNotFoundAccount": "Không tìm thấy tài khoản. Bạn đã đăng ký chưa?",
+    "LoginIncorrectPassword": "Mật khẩu không đúng. Vui lòng thử lại!",
+    "PasswordsDoNotMatch": "Mật khẩu không khớp. Vui lòng nhập lại.",
+    "UserAlreadyExists": "Người dùng đã tồn tại. Vui lòng đăng nhập.",
+    "RegistrationFailed": "Đăng ký thất bại. Vui lòng thử lại sau.",
+    "RefreshTokenError": "Không thể làm mới token. Vui lòng đăng nhập lại.",
+    "UserNotExists": "Người dùng không tồn tại.",
+    "InternalServerError": "Lỗi máy chủ nội bộ. Vui lòng thử lại sau."
+  },
+
+  "Themes": {
+    "SelectTheme": "Chọn giao diện",
+    "Light": "Chế độ sáng",
+    "Dark": "Chế độ tối",
+    "System": "Hệ thống"
+  },
+
+  "Languages": {
+    "SelectLanguage": "Chọn ngôn ngữ",
+    "Vietnamese": "Tiếng Việt",
+    "English": "Tiếng Anh"
+  },
+
+  "Validations": {
+    "UsernameIsRequired": "Tên người dùng là bắt buộc",
+    "FirstNameIsRequired": "Tên là bắt buộc",
+    "LastNameIsRequired": "Họ là bắt buộc",
+    "InvalidEmailAddress": "Địa chỉ email không hợp lệ",
+    "EmailIsNotValid": "Email không hợp lệ",
+    "EmailIsRequired": "Email là bắt buộc",
+    "PasswordIsRequired": "Mật khẩu là bắt buộc",
+    "PasswordMinLength": "Mật khẩu phải có ít nhất 8 ký tự",
+    "PasswordLowercase": "Mật khẩu phải chứa ít nhất một chữ thường",
+    "PasswordUppercase": "Mật khẩu phải chứa ít nhất một chữ hoa",
+    "PasswordDigit": "Mật khẩu phải chứa ít nhất một chữ số",
+    "PasswordSpecialChar": "Mật khẩu phải chứa ít nhất một ký tự đặc biệt",
+    "OTPIsRequired": "Mã OTP là bắt buộc"
+  },
+
+  "Pages": {
+    "Auth": {
+      "Header": {
+        "SignIn": "Đăng nhập"
+      },
+      "Footer": {
+        "AboutGplant": "Về Gplant",
+        "Pricing&Plans": "Giá & Gói dịch vụ",
+        "LicenseTerms": "Điều khoản giấy phép",
+        "Term&Conditions": "Điều khoản & Điều kiện",
+        "PrivacyPolicy": "Chính sách bảo mật",
+        "Cookies": "Cookies",
+        "DoNotSellOrShareMyPersonalInformation": "Không bán hoặc chia sẻ thông tin cá nhân của tôi",
+        "HelpCenter": "Trung tâm trợ giúp",
+        "CookiesSettings": "Cài đặt Cookies",
+        "AllRightsReserved": "© 2025 Gplant. Mọi quyền được bảo lưu. Các thương hiệu và nhãn hiệu thuộc quyền sở hữu của chủ sở hữu tương ứng."
+      },
+      "Options": {
+        "ContinueWithGoogle": "Tiếp tục với Google",
+        "ContinueWithFacebook": "Tiếp tục với Facebook",
+        "ContinueWithMicrosoft": "Tiếp tục với Microsoft"
+      },
+      "SignIn": {
+        "GreatToHaveYouback": "Rất vui được gặp lại bạn!",
+        "SignIn": "Đăng nhập",
+        "CreateAccount": "Tạo tài khoản",
+        "CreateAFreeAccount": "Tạo tài khoản miễn phí",
+        "NewHere": "Bạn mới đến?",
+        "CreateAGplantAccount": "Tạo tài khoản Gplant",
+        "ByContinuing": "Bằng cách tiếp tục, bạn xác nhận rằng bạn đủ 18 tuổi và đồng ý với",
+        "PrivacyPolicy": "Chính sách bảo mật",
+        "And": "và",
+        "TermsOfService": "Điều khoản dịch vụ",
+        "Form": {
+          "UsernameOrEmail": "Tên người dùng hoặc Email",
+          "Password": "Mật khẩu",
+          "RemindMe": "Ghi nhớ tôi",
+          "ForgotPassword": "Quên mật khẩu",
+          "SignIn": "Đăng nhập"
+        }
+      },
+      "SignUp": {
+        "CreateAFreeAccount": "Tạo tài khoản miễn phí",
+        "ComeIn": "Bước vào, chọn những cây xanh yêu thích và phát triển khu vườn của bạn!",
+        "AlreadyHaveAnGplantAccount": "Đã có tài khoản Gplant?",
+        "ContinueWithEmail": "Tiếp tục với Email",
+        "SignInHere": "Đăng nhập tại đây",
+        "ByContinuing": "Bằng cách tiếp tục, bạn xác nhận rằng bạn đủ 18 tuổi và đồng ý với",
+        "PrivacyPolicy": "Chính sách bảo mật",
+        "And": "và",
+        "TermsOfService": "Điều khoản dịch vụ",
+        "Form": {
+          "FirstName": "Tên",
+          "LastName": "Họ",
+          "Email": "Email",
+          "Password": "Mật khẩu",
+          "CreateAccount": "Tạo tài khoản",
+          "PasswordValidGuide": "Sử dụng ít nhất 8 ký tự bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt. Không được chứa tên hoặc tên người dùng của bạn."
+        }
+      },
+      "RecoverUsername": {
+        "ForgotUsernames": "Quên tên người dùng?",
+        "EnterYourEmail": "Nhập email của bạn và chúng tôi sẽ gửi cho bạn tên người dùng.",
+        "Form": {
+          "Email": "Email",
+          "SendUsername": "Gửi tên người dùng",
+          "RecoverUsernameSent": "Nếu địa chỉ email bạn nhập có liên kết với bất kỳ tài khoản Gplant nào, chúng tôi đã gửi cho bạn một email chứa tên người dùng."
+        }
+      },
+      "ResetPassword": {
+        "ForgotPassword": "Quên mật khẩu?",
+        "EnterYourDetails": "Nhập thông tin của bạn bên dưới để yêu cầu đặt lại mật khẩu tài khoản Gplant.",
+        "VerifyYourEmail": "Xác minh email của bạn",
+        "EnterVerificationCode": "Nhập mã xác minh mà chúng tôi đã gửi đến địa chỉ email của bạn.",
+        "CreateNewPassword": "Tạo mật khẩu mới",
+        "EnterNewPassword": "Nhập mật khẩu mạnh cho tài khoản của bạn.",
+        "Form": {
+          "Email": "Email",
+          "SendOTP": "Gửi mã OTP",
+          "OTP": "Mã OTP",
+          "CheckOTP": "Kiểm tra OTP",
+          "Back": "Quay lại",
+          "AnOTPHasBeenSent": "Mã OTP đã được gửi đến email của bạn",
+          "DidntReceiveTheCode": "Không nhận được mã?",
+          "ResendOTP": "Gửi lại OTP",
+          "NewPassword": "Mật khẩu mới",
+          "ResetPassword": "Đặt lại mật khẩu",
+          "Success": "Thành công",
+          "PasswordResetSuccessful": "Mật khẩu của bạn đã được đặt lại thành công. Bây giờ bạn có thể đăng nhập bằng mật khẩu mới."
+        }
+      }
+    }
+  }
+}
