@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import Category from "@/lib/models/category";
 import { ExternalLink } from "lucide-react";
+import { useGetActiveCategories } from "@/hooks/category/use-get-active-categories";
 
 const navLinks: {
   label: string;
@@ -26,12 +27,12 @@ const navLinks: {
 ];
 
 interface NavbarProps {
-  categories: Category[];
   onDropdownOpen: (isOpen: boolean) => void;
   className?: string;
 }
 
-export function Navbar({ categories, onDropdownOpen, className }: NavbarProps) {
+export function Navbar({ onDropdownOpen, className }: NavbarProps) {
+  const { activeCategories } = useGetActiveCategories();
   const navWrapperRef = React.useRef<HTMLDivElement>(null);
 
   const [navMenuContentWidth, setNavMenuContentWidth] =
@@ -52,14 +53,14 @@ export function Navbar({ categories, onDropdownOpen, className }: NavbarProps) {
   };
 
   React.useEffect(() => {
-    setParentCategories(categories.filter((cat) => !cat.parentId));
-  }, [categories]);
+    setParentCategories(activeCategories.filter((cat) => !cat.parentId));
+  }, [activeCategories]);
 
   React.useEffect(() => {
     if (navWrapperRef.current) {
       setNavMenuContentWidth(navWrapperRef.current.offsetWidth);
     }
-  }, [categories]);
+  }, [activeCategories]);
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -73,7 +74,7 @@ export function Navbar({ categories, onDropdownOpen, className }: NavbarProps) {
   }, []);
 
   const getSubcategories = (parentId: string) => {
-    return categories.filter((cat) => cat.parentId === parentId);
+    return activeCategories.filter((cat) => cat.parentId === parentId);
   };
 
   return (
@@ -151,7 +152,7 @@ export function Navbar({ categories, onDropdownOpen, className }: NavbarProps) {
           <Link
             key={link.href}
             href={link.href}
-            className="text-sm px-4 py-1.5 hover:bg-muted transition-all duration-500 border-b-3 border-b-transparent hover:border-b-primary"
+            className="text-sm px-4 py-1.5 hover:bg-primary/10 transition-all duration-500 border-b-3 border-b-transparent hover:border-b-primary"
           >
             {link.label}
           </Link>

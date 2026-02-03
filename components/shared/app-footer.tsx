@@ -21,7 +21,7 @@ library.add(
   faYoutube,
   faThreads,
   faPinterest,
-  faXTwitter
+  faXTwitter,
 );
 
 export default function AppFooter() {
@@ -68,19 +68,43 @@ export default function AppFooter() {
 
   const footerSocialLinks = [
     {
-      icon: <FontAwesomeIcon icon={["fab", "instagram"]} size={"xl"} />,
+      icon: (
+        <FontAwesomeIcon
+          icon={["fab", "instagram"]}
+          size={"xl"}
+          className="hover:text-[#833AB4] transition-colors"
+        />
+      ),
       href: "https://instagram.com/gplantapp",
     },
     {
-      icon: <FontAwesomeIcon icon={["fab", "tiktok"]} size={"xl"} />,
+      icon: (
+        <FontAwesomeIcon
+          icon={["fab", "tiktok"]}
+          size={"xl"}
+          className="hover:text-[#fe2c55] transition-colors"
+        />
+      ),
       href: "https://tiktok.com/@gplantapp",
     },
     {
-      icon: <FontAwesomeIcon icon={["fab", "facebook"]} size={"xl"} />,
+      icon: (
+        <FontAwesomeIcon
+          icon={["fab", "facebook"]}
+          size={"xl"}
+          className="hover:text-[#1877f2] transition-colors"
+        />
+      ),
       href: "https://facebook.com/gplantapp",
     },
     {
-      icon: <FontAwesomeIcon icon={["fab", "youtube"]} size={"xl"} />,
+      icon: (
+        <FontAwesomeIcon
+          icon={["fab", "youtube"]}
+          size={"xl"}
+          className="hover:text-[#ff0000] transition-colors"
+        />
+      ),
       href: "https://youtube.com/gplantapp",
     },
     {
@@ -88,7 +112,13 @@ export default function AppFooter() {
       href: "https://threads.net/gplantapp",
     },
     {
-      icon: <FontAwesomeIcon icon={["fab", "pinterest"]} size={"xl"} />,
+      icon: (
+        <FontAwesomeIcon
+          icon={["fab", "pinterest"]}
+          size={"xl"}
+          className="hover:text-[#E60023] transition-colors"
+        />
+      ),
       href: "https://pinterest.com/gplantapp",
     },
     {

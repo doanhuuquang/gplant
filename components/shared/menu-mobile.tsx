@@ -1,11 +1,14 @@
 "use client";
 
 import * as React from "react";
-
-import { AccountDropdown } from "@/components/shared/account-dropdown";
 import AppLogo from "@/components/shared/app-logo";
+import Category from "@/lib/models/category";
+import Image from "next/image";
 import SearchBar from "@/components/shared/search-bar";
+import { AccountDropdown } from "@/components/shared/account-dropdown";
+import { ArrowLeft, ExternalLink, Menu, MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useGetActiveCategories } from "@/hooks/category/use-get-active-categories";
 import {
   Sheet,
   SheetCloseButton,
@@ -15,16 +18,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import Category from "@/lib/models/category";
-import {
-  ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
-  Menu,
-  MoveRight,
-} from "lucide-react";
-import Image from "next/image";
 
 const navLinks: {
   label: string;
@@ -37,21 +30,29 @@ const navLinks: {
 ];
 
 interface MenuMobileProps {
-  categories: Category[];
   className?: string;
 }
 
 interface SubCategoriesSheetProps {
   parentCategory: Category;
   subCategories: Category[];
+  onSubCategorySelect: () => void;
 }
 
 function SubCategoriesSheet({
   parentCategory,
   subCategories,
+  onSubCategorySelect,
 }: SubCategoriesSheetProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  const handleSubCategoryClick = () => {
+    setIsOpen(false);
+    onSubCategorySelect();
+  };
+
   return (
-    <Sheet>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <div className="text-lg py-4 flex items-center justify-between">
           {parentCategory.name}
@@ -74,7 +75,7 @@ function SubCategoriesSheet({
               alt={parentCategory.name}
               fill
               unoptimized
-              className="object-cover object-center -z-1 rounded-2xl shadow-xl shadow-muted dark:shadow-black/50"
+              className="object-cover object-center -z-1 rounded-2xl shadow-xl shadow-muted dark:shadow-background"
             />
 
             <div className="w-full h-full bg-linear-to-b from-transparent from-50% to-black/70 p-6 flex flex-col justify-end rounded-2xl">
@@ -92,7 +93,8 @@ function SubCategoriesSheet({
           {subCategories.map((subCategory) => (
             <div
               key={subCategory.id}
-              className="text-lg py-4 flex items-center justify-between"
+              className="text-lg py-4 flex items-center justify-between cursor-pointer"
+              onClick={handleSubCategoryClick}
             >
               {subCategory.name}
               <ExternalLink className="size-4 text-muted-foreground" />
@@ -104,27 +106,26 @@ function SubCategoriesSheet({
   );
 }
 
-export function MenuMobile({ categories, className }: MenuMobileProps) {
+export function MenuMobile({ className }: MenuMobileProps) {
+  const { activeCategories } = useGetActiveCategories();
   const [parentCategories, setParentCategories] = React.useState<Category[]>(
     [],
   );
+  const [isOpen, setIsOpen] = React.useState(false);
 
   React.useEffect(() => {
-    setParentCategories(categories.filter((cat) => !cat.parentId));
-  }, [categories]);
+    setParentCategories(activeCategories.filter((cat) => !cat.parentId));
+  }, [activeCategories]);
 
   const getSubcategories = (parentId: string) => {
-    return categories.filter((cat) => cat.parentId === parentId);
+    return activeCategories.filter((cat) => cat.parentId === parentId);
   };
 
   return (
     <div className={className}>
-      <Sheet>
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
-          <Button
-            variant="outline"
-            className="aspect-square rounded-full shadow-xl shadow-muted dark:shadow-black/50"
-          >
+          <Button variant="outline" className="aspect-square rounded-full">
             <Menu className="size-6" />
           </Button>
         </SheetTrigger>
@@ -146,6 +147,7 @@ export function MenuMobile({ categories, className }: MenuMobileProps) {
                 key={category.id}
                 parentCategory={category}
                 subCategories={getSubcategories(category.id)}
+                onSubCategorySelect={() => setIsOpen(false)}
               />
             ))}
 
@@ -153,6 +155,7 @@ export function MenuMobile({ categories, className }: MenuMobileProps) {
               <div
                 key={navLinkItem.href}
                 className="text-lg py-4 flex items-center justify-between"
+                onClick={() => setIsOpen(false)}
               >
                 {navLinkItem.label}
                 <ExternalLink className="size-4 text-muted-foreground" />

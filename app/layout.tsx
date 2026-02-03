@@ -5,6 +5,8 @@ import { ThemeProvider } from "next-themes";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import { Toaster } from "@/components/ui/sonner";
+import { LoaderProvider } from "@/contexts/loader-context";
+import LoaderFullScreen from "@/components/shared/loader-full-screen";
 
 config.autoAddCss = false;
 
@@ -62,8 +64,11 @@ export default function RootLayout({
     <html suppressHydrationWarning>
       <body className={`${nohemi.variable} ${nohemi.className} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-          <Toaster />
+          <LoaderProvider>
+            {children}
+            <Toaster />
+            <LoaderFullScreen />
+          </LoaderProvider>
         </ThemeProvider>
       </body>
     </html>

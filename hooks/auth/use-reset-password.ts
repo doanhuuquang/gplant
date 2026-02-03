@@ -3,8 +3,8 @@ import { type ApiErrorResponse } from "@/lib/schemas/api/api-error-response";
 import { type ResetPasswordRequest } from "@/lib/schemas/auth/reset-password-request";
 import { type SendOTPToEmailRequest } from "@/lib/schemas/auth/send-otp-to-email-request";
 import { type VerifyOTPRequest } from "@/lib/schemas/auth/verify-otp-request";
-import { resetPassword } from "@/services/account-services";
-import { sendOTP, verifyOTP } from "@/services/otp-services";
+import { resetPassword } from "@/services/account-service";
+import { sendOTP, verifyOTP } from "@/services/otp-service";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -28,14 +28,14 @@ export default function useResetPassword() {
   const te = useTranslations("Errors");
 
   const [step, setStep] = useState<RESET_PASSWORD_STEP>(
-    RESET_PASSWORD_STEP.EMAIL
+    RESET_PASSWORD_STEP.EMAIL,
   );
   const [email, setEmail] = useState<string>("");
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(
-    null
+    null,
   );
   const [resetPasswordToken, setResetPasswordToken] = useState<string | null>(
-    null
+    null,
   );
   const [cooldown, setCooldown] = useState<number>(0);
   const [loading, setLoading] = useState<LoadingState>({

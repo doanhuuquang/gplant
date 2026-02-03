@@ -1,4 +1,4 @@
-import { siteVerify } from "@/services/recaptcha-services";
+import { siteVerify } from "@/services/recaptcha-service";
 import { useEffect, useState } from "react";
 
 export default function useReCaptcha() {

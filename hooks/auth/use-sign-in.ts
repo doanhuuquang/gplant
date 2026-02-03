@@ -1,11 +1,15 @@
+import { signInWithEmailAndPassword } from "@/services/account-service";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/auth/use-auth";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { type ApiErrorResponse } from "@/lib/schemas/api/api-error-response";
 import { type SignInRequest } from "@/lib/schemas/auth/signin-request";
-import { signInWithEmailAndPassword } from "@/services/account-services";
-import { useTranslations } from "next-intl";
-import { useState } from "react";
 
 export default function useSignIn() {
   const t = useTranslations("Errors");
+
+  const { refresh } = useAuth();
 
   const [isSigningIn, setIsSigningIn] = useState<boolean>(false);
   const [signInError, setSignInError] = useState<string | null>(null);
@@ -20,6 +24,13 @@ export default function useSignIn() {
       await signInWithEmailAndPassword(data);
 
       setIsSignInSuccess(true);
+
+      toast.success("Signed in", {
+        description: "You have been signed in successfully.",
+      });
+
+      refresh();
+      window.location.reload();
     } catch (e) {
       const err = e as ApiErrorResponse;
       setSignInError(t(err.error));

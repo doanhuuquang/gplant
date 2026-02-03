@@ -5,7 +5,7 @@ import {
   continueWithFacebook,
   continueWithGoogle,
   continueWithMicrosoft,
-} from "@/services/account-services";
+} from "@/services/account-service";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 

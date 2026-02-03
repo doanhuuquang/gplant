@@ -8,11 +8,13 @@ import { type SignUpRequest } from "@/lib/schemas/auth/signup-request";
 
 const SIGNIN_URL = "/api/account/login";
 const SIGNUP_URL = "/api/account/register";
+const SIGNOUT_URL = "/api/account/logout";
+const REFRESH_URL = "/api/account/refresh";
 const RECOVER_USERNAME_URL = "/api/account/recover-username";
 const RESET_PASSWORD_URL = "/api/account/reset-password";
 
 const signInWithEmailAndPassword = async (
-  data: SignInRequest
+  data: SignInRequest,
 ): Promise<ApiSuccessResponse> => {
   try {
     const response = await axiosInstance.post(SIGNIN_URL, data);
@@ -23,11 +25,28 @@ const signInWithEmailAndPassword = async (
 };
 
 const signUpWithEmail = async (
-  data: SignUpRequest
+  data: SignUpRequest,
 ): Promise<ApiSuccessResponse> => {
   try {
     const response = await axiosInstance.post(SIGNUP_URL, data);
-    console.log("Sign Up Response:", response.data);
+    return response.data;
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+const signOut = async (): Promise<ApiSuccessResponse> => {
+  try {
+    const response = await axiosInstance.post(SIGNOUT_URL);
+    return response.data;
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+const refresh = async (): Promise<ApiSuccessResponse> => {
+  try {
+    const response = await axiosInstance.post(REFRESH_URL);
     return response.data;
   } catch (error) {
     return handleError(error);
@@ -50,7 +69,7 @@ const continueWithMicrosoft = () => {
 };
 
 const recoverUsername = async (
-  data: RecoverUsernameRequest
+  data: RecoverUsernameRequest,
 ): Promise<ApiSuccessResponse> => {
   try {
     const response = await axiosInstance.post(RECOVER_USERNAME_URL, data);
@@ -61,7 +80,7 @@ const recoverUsername = async (
 };
 
 const resetPassword = async (
-  data: ResetPasswordRequest
+  data: ResetPasswordRequest,
 ): Promise<ApiSuccessResponse> => {
   try {
     const response = await axiosInstance.post(RESET_PASSWORD_URL, data);
@@ -74,6 +93,8 @@ const resetPassword = async (
 export {
   signInWithEmailAndPassword,
   signUpWithEmail,
+  signOut,
+  refresh,
   continueWithGoogle,
   continueWithFacebook,
   continueWithMicrosoft,

@@ -1,10 +1,10 @@
 import { type ApiErrorResponse } from "@/lib/schemas/api/api-error-response";
 import { type SignUpRequest } from "@/lib/schemas/auth/signup-request";
-import { signUpWithEmail } from "@/services/account-services";
+import { signUpWithEmail } from "@/services/account-service";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-export default function useSignUP() {
+export default function useSignUp() {
   const t = useTranslations("Errors");
 
   const [isSigningUp, setIsSigningUp] = useState<boolean>(false);

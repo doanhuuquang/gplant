@@ -7,7 +7,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="w-full min-h-screen">
+    <div className="w-full min-w-sm min-h-screen">
       <AppHeader />
       {children}
       <AppFooter />

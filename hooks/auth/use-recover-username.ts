@@ -1,6 +1,6 @@
 import { type ApiErrorResponse } from "@/lib/schemas/api/api-error-response";
 import { type RecoverUsernameRequest } from "@/lib/schemas/auth/recover-username-request";
-import { recoverUsername } from "@/services/account-services";
+import { recoverUsername } from "@/services/account-service";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 

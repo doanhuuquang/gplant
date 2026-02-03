@@ -1,20 +1,15 @@
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Search } from "lucide-react";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { cn } from "@/lib/utils";
-import { Search } from "lucide-react";
 
 export default function SearchBar({ className }: { className?: string }) {
   return (
-    <InputGroup
-      className={cn(
-        "rounded-full border-border shadow-xl shadow-muted dark:shadow-black/50",
-        className,
-      )}
-    >
+    <InputGroup className={cn("rounded-full border-border", className)}>
       <InputGroupInput
         placeholder="Search our shop & discover something new #myplantstory"
         className="ml-4"
