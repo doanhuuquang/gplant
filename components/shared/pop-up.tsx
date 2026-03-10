@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Banner from "@/lib/models/banner";
 import Image from "next/image";
 import { BannerGroup } from "@/lib/enums/banner-group";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import BannerResponse from "@/lib/schemas/banner/banner-response";
+import { getFileUrl } from "@/utils/helpers";
 
 interface PopUpProps {
   popUpPage: BannerGroup.HomePopup;
@@ -25,7 +26,9 @@ export default function PopUp({ popUpPage, className }: PopUpProps) {
   const { activeBanners } = useBannerStore();
 
   const [isShowPopUp, setIsShowPopUp] = React.useState(true);
-  const [homePopUpBanner, setHomePopUpBanner] = React.useState<Banner[]>([]);
+  const [homePopUpBanner, setHomePopUpBanner] = React.useState<
+    BannerResponse[]
+  >([]);
   const [currentIndex, setCurrentIndex] = React.useState(0);
 
   React.useEffect(() => {
@@ -59,11 +62,12 @@ export default function PopUp({ popUpPage, className }: PopUpProps) {
           </DialogHeader>
           <div className="relative w-full aspect-3/2">
             <Image
-              src={homePopUpBanner[currentIndex].imageUrl}
+              src={getFileUrl(homePopUpBanner[currentIndex].media?.fileUrl)}
               alt={homePopUpBanner[currentIndex].title}
               fill
               className="w-full h-auto object-contain"
               priority
+              unoptimized
             />
 
             <Button

@@ -4,9 +4,11 @@ import { ApiErrorResponse } from "@/lib/schemas/api/api-error-response";
 import { signOut } from "@/services/account-service";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/auth/use-auth";
+import { useRouter } from "next/navigation";
 
 export default function useSignOut() {
   const { refresh } = useAuth();
+  const router = useRouter();
 
   const [isSigningOut, setIsSigningOut] = React.useState<boolean>(false);
   const [signOutError, setSignOutError] = React.useState<string | null>(null);
@@ -28,6 +30,7 @@ export default function useSignOut() {
       });
 
       refresh();
+      router.refresh();
     } catch (e) {
       const err = e as ApiErrorResponse;
       setSignOutError(err.message);

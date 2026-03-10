@@ -1,12 +1,11 @@
 "use client";
+import * as React from "react";
 import UserAvatar from "@/components/shared/auth/user-avatar";
-import useSignOut from "@/hooks/auth/use-sign-out";
 import { APP_PATHS } from "@/lib/constants/app-paths";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/auth/use-auth";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,16 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
+  ChartPie,
   CreditCard,
   Gem,
   LoaderCircle,
@@ -37,49 +27,15 @@ import {
   Smile,
   UserRound,
 } from "lucide-react";
-
-export function SignOutDialog() {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const { isSigningOut, handleSignOut } = useSignOut();
-
-  return (
-    <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuItem
-        onClick={(e) => {
-          e.preventDefault();
-          setIsOpen(true);
-        }}
-      >
-        Log out
-        <DropdownMenuShortcut>
-          <LogOut />
-        </DropdownMenuShortcut>
-      </DropdownMenuItem>
-      <AlertDialogContent overlayClassName="z-101" className="z-102">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete your
-            account and remove your data from our servers.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSigningOut}>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={isSigningOut} onClick={handleSignOut}>
-            Continue
-            {isSigningOut && <LoaderCircle className="size-5 animate-spin" />}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
+import { Role } from "@/lib/enums/role";
+import Link from "next/link";
+import { SignOutDialog } from "@/components/shared/auth/sign-out-dialog";
 
 export function AccountDropdown({ className }: { className?: string }) {
   const rounter = useRouter();
   const { user, isLoggedIn, isLoading } = useAuth();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isOpenSignOutDialog, setIsOpenSignOutDialog] = React.useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
 
   if (isLoading) {
     return (
@@ -104,7 +60,13 @@ export function AccountDropdown({ className }: { className?: string }) {
               setIsDropdownOpen(!isDropdownOpen);
             }}
           >
-            {!user ? <UserRound className="size-5" /> : <UserAvatar />}
+            {!user ? (
+              <UserRound className="size-5" />
+            ) : (
+              <span className="absolute inset-0">
+                <UserAvatar />
+              </span>
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -180,9 +142,34 @@ export function AccountDropdown({ className }: { className?: string }) {
                     <Smile />
                   </DropdownMenuShortcut>
                 </DropdownMenuItem>
+                {(user.roles.includes(Role.Admin) ||
+                  user.roles.includes(Role.Manager)) && (
+                  <Link href={APP_PATHS.DASHBOARD}>
+                    <DropdownMenuItem>
+                      Dashboard
+                      <DropdownMenuShortcut>
+                        <ChartPie />
+                      </DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  </Link>
+                )}
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <SignOutDialog />
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsOpenSignOutDialog(true);
+                }}
+              >
+                Log out
+                <DropdownMenuShortcut>
+                  <LogOut />
+                </DropdownMenuShortcut>
+              </DropdownMenuItem>
+              <SignOutDialog
+                isOpen={isOpenSignOutDialog}
+                setIsOpen={setIsOpenSignOutDialog}
+              />
             </>
           )}
         </DropdownMenuContent>

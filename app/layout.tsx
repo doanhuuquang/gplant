@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
-import localFont from "next/font/local";
-import "./globals.css";
-import { ThemeProvider } from "next-themes";
-import { config } from "@fortawesome/fontawesome-svg-core";
-import "@fortawesome/fontawesome-svg-core/styles.css";
-import { Toaster } from "@/components/ui/sonner";
-import { LoaderProvider } from "@/contexts/loader-context";
 import LoaderFullScreen from "@/components/shared/loader-full-screen";
+import localFont from "next/font/local";
+import { config } from "@fortawesome/fontawesome-svg-core";
+import { LoaderProvider } from "@/contexts/loader-context";
+import { ThemeProvider } from "next-themes";
+import { Toaster } from "@/components/ui/sonner";
+import "./globals.css";
+import "@fortawesome/fontawesome-svg-core/styles.css";
+import type { Metadata } from "next";
 
 config.autoAddCss = false;
 

@@ -17,4 +17,6 @@ export const APP_IMAGES = {
 
   HERO_SECTION_BACKGROUND:
     "/images/background-images/hero-section-background.svg",
+
+  CART_EMPTY: "/images/decor-images/empty-cart.svg",
 };

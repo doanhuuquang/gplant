@@ -1,13 +1,13 @@
 "use client";
 
-import User from "@/lib/models/user";
-import { create } from "zustand";
+import UserResponse from "@/lib/schemas/user/user-response";
 import { ApiErrorResponse } from "@/lib/schemas/api/api-error-response";
-import { refresh } from "@/services/account-service";
+import { create } from "zustand";
 import { me } from "@/services/user-service";
+import { refresh } from "@/services/account-service";
 
 type AuthStoreState = {
-  user: User | null;
+  user: UserResponse | null;
   isLoading: boolean;
   authError: string | null;
   isLoggedIn: boolean;
@@ -35,7 +35,7 @@ export const useAuthStore = create<AuthStoreState & AuthStoreActions>(
         });
 
         const response = await me();
-        const userData = response.data as User;
+        const userData = response.data as UserResponse;
 
         set({
           user: userData,

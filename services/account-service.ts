@@ -54,18 +54,15 @@ const refresh = async (): Promise<ApiSuccessResponse> => {
 };
 
 const continueWithGoogle = () => {
-  window.location.href =
-    "https://localhost:7092/api/account/login/google?returnUrl=http://localhost:3000";
+  window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/account/login/google?returnUrl=${window.location.origin}`;
 };
 
 const continueWithFacebook = () => {
-  window.location.href =
-    "https://localhost:7092/api/account/login/facebook?returnUrl=http://localhost:3000";
+  window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/account/login/facebook?returnUrl=${window.location.origin}`;
 };
 
 const continueWithMicrosoft = () => {
-  window.location.href =
-    "https://localhost:7092/api/account/login/microsoft?returnUrl=http://localhost:3000";
+  window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/account/login/microsoft?returnUrl=${window.location.origin}`;
 };
 
 const recoverUsername = async (

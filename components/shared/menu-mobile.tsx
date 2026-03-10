@@ -2,13 +2,16 @@
 
 import * as React from "react";
 import AppLogo from "@/components/shared/app-logo";
-import Category from "@/lib/models/category";
+import { getFileUrl } from "@/utils/helpers";
 import Image from "next/image";
+import Link from "next/link";
 import SearchBar from "@/components/shared/search-bar";
 import { AccountDropdown } from "@/components/shared/account-dropdown";
-import { ArrowLeft, ExternalLink, Menu, MoveRight } from "lucide-react";
+import { APP_PATHS } from "@/lib/constants/app-paths";
 import { Button } from "@/components/ui/button";
 import { useGetActiveCategories } from "@/hooks/category/use-get-active-categories";
+
+import { ArrowLeft, ExternalLink, Menu, MoveRight } from "lucide-react";
 import {
   Sheet,
   SheetCloseButton,
@@ -18,6 +21,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import CategoryResponse from "@/lib/schemas/category/category-response";
 
 const navLinks: {
   label: string;
@@ -34,8 +38,8 @@ interface MenuMobileProps {
 }
 
 interface SubCategoriesSheetProps {
-  parentCategory: Category;
-  subCategories: Category[];
+  parentCategory: CategoryResponse;
+  subCategories: CategoryResponse[];
   onSubCategorySelect: () => void;
 }
 
@@ -69,9 +73,13 @@ function SubCategoriesSheet({
             </div>
           </div>
 
-          <div className="w-full relative aspect-square mt-2">
+          <Link
+            href={`${APP_PATHS.SHOP}${parentCategory.slug}`}
+            onClick={() => handleSubCategoryClick()}
+            className="w-full relative aspect-square mt-2"
+          >
             <Image
-              src={parentCategory.imageUrl}
+              src={getFileUrl(parentCategory.media.fileUrl)}
               alt={parentCategory.name}
               fill
               unoptimized
@@ -79,14 +87,19 @@ function SubCategoriesSheet({
             />
 
             <div className="w-full h-full bg-linear-to-b from-transparent from-50% to-black/70 p-6 flex flex-col justify-end rounded-2xl">
-              <div className="mb-2 text-3xl text-white font-medium sm:mt-4 uppercase">
-                {parentCategory.name}
+              <div className="w-full flex justify-between items-end gap-4">
+                <div>
+                  <div className="mb-2 text-3xl text-white font-medium sm:mt-4 uppercase">
+                    {parentCategory.name}
+                  </div>
+                  <p className="text-white/70 text-sm leading-tight">
+                    {parentCategory.description}
+                  </p>
+                </div>
+                <ExternalLink className="text-white/50 shrink-0 size-5" />
               </div>
-              <p className="text-white/70 text-sm leading-tight">
-                {parentCategory.description}
-              </p>
             </div>
-          </div>
+          </Link>
         </SheetHeader>
 
         <div className="grid flex-1 auto-rows-min px-4 divide-y overflow-y-scroll">
@@ -108,9 +121,9 @@ function SubCategoriesSheet({
 
 export function MenuMobile({ className }: MenuMobileProps) {
   const { activeCategories } = useGetActiveCategories();
-  const [parentCategories, setParentCategories] = React.useState<Category[]>(
-    [],
-  );
+  const [parentCategories, setParentCategories] = React.useState<
+    CategoryResponse[]
+  >([]);
   const [isOpen, setIsOpen] = React.useState(false);
 
   React.useEffect(() => {

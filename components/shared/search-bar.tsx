@@ -9,7 +9,7 @@ import {
 
 export default function SearchBar({ className }: { className?: string }) {
   return (
-    <InputGroup className={cn("rounded-full border-border", className)}>
+    <InputGroup className={cn("rounded-full border-none bg-muted", className)}>
       <InputGroupInput
         placeholder="Search our shop & discover something new #myplantstory"
         className="ml-4"

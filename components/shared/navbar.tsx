@@ -2,6 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { getFileUrl } from "@/utils/helpers";
+import { APP_PATHS } from "@/lib/constants/app-paths";
+import { cn } from "@/lib/utils";
+import { ExternalLink } from "lucide-react";
+import { useGetActiveCategories } from "@/hooks/category/use-get-active-categories";
 
 import {
   NavigationMenu,
@@ -11,10 +16,7 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
-import { cn } from "@/lib/utils";
-import Category from "@/lib/models/category";
-import { ExternalLink } from "lucide-react";
-import { useGetActiveCategories } from "@/hooks/category/use-get-active-categories";
+import CategoryResponse from "@/lib/schemas/category/category-response";
 
 const navLinks: {
   label: string;
@@ -31,16 +33,43 @@ interface NavbarProps {
   className?: string;
 }
 
+function ListItem({
+  title,
+  children,
+  href,
+  ...props
+}: React.ComponentPropsWithoutRef<"li"> & { href: string }) {
+  return (
+    <li {...props}>
+      <NavigationMenuLink asChild>
+        <Link
+          href={href}
+          className="flex flex-row items-center justify-between rounded-none! p-4"
+        >
+          <div className="space-y-1">
+            <div>{title}</div>
+            <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
+              {children}
+            </p>
+          </div>
+          <ExternalLink />
+        </Link>
+      </NavigationMenuLink>
+    </li>
+  );
+}
+
 export function Navbar({ onDropdownOpen, className }: NavbarProps) {
   const { activeCategories } = useGetActiveCategories();
+
   const navWrapperRef = React.useRef<HTMLDivElement>(null);
 
   const [navMenuContentWidth, setNavMenuContentWidth] =
     React.useState<number>(0);
   const [selectedNavItem, setSelectedNavItem] = React.useState<string>("");
-  const [parentCategories, setParentCategories] = React.useState<Category[]>(
-    [],
-  );
+  const [parentCategories, setParentCategories] = React.useState<
+    CategoryResponse[]
+  >([]);
 
   const handleMouseEnter = (itemId: string) => {
     setSelectedNavItem(itemId);
@@ -48,6 +77,11 @@ export function Navbar({ onDropdownOpen, className }: NavbarProps) {
   };
 
   const handleMouseLeave = () => {
+    setSelectedNavItem("");
+    onDropdownOpen(false);
+  };
+
+  const handleMouseClick = () => {
     setSelectedNavItem("");
     onDropdownOpen(false);
   };
@@ -83,17 +117,20 @@ export function Navbar({ onDropdownOpen, className }: NavbarProps) {
         <NavigationMenuList className="w-full flex gap-0">
           {parentCategories.map((category) => (
             <NavigationMenuItem key={category.id}>
-              <NavigationMenuTrigger
-                onMouseEnter={() => handleMouseEnter(category.id)}
-                onMouseLeave={handleMouseLeave}
-                className={cn(
-                  "p-4 hover:cursor-pointer bg-transparent rounded-none border-b-3 border-b-transparent hover:border-b-primary text-sm transition-all font-normal",
-                  selectedNavItem === category.id &&
-                    "border-b-primary transition-all",
-                )}
-              >
-                {category.name}
-              </NavigationMenuTrigger>
+              <Link href={`${APP_PATHS.SHOP}${category.slug}`}>
+                <NavigationMenuTrigger
+                  onClick={() => handleMouseClick()}
+                  onMouseEnter={() => handleMouseEnter(category.id)}
+                  onMouseLeave={handleMouseLeave}
+                  className={cn(
+                    "p-4 hover:cursor-pointer bg-transparent rounded-none border-b-3 border-b-transparent hover:border-b-primary text-sm transition-all font-normal",
+                    selectedNavItem === category.id &&
+                      "border-b-primary transition-all",
+                  )}
+                >
+                  {category.name}
+                </NavigationMenuTrigger>
+              </Link>
 
               <NavigationMenuContent
                 onMouseEnter={() => handleMouseEnter(category.id)}
@@ -111,7 +148,7 @@ export function Navbar({ onDropdownOpen, className }: NavbarProps) {
                       <Link
                         className="h-full w-full rounded-sm no-underline outline-hidden transition-all duration-200 select-none focus:shadow-md aspect-square"
                         style={{
-                          backgroundImage: `url(${category.imageUrl})`,
+                          backgroundImage: `url(${getFileUrl(category.media.fileUrl)})`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
                         }}
@@ -152,38 +189,12 @@ export function Navbar({ onDropdownOpen, className }: NavbarProps) {
           <Link
             key={link.href}
             href={link.href}
-            className="text-sm px-4 py-1.5 hover:bg-primary/10 transition-all duration-500 border-b-3 border-b-transparent hover:border-b-primary"
+            className="text-sm px-4 py-1.5 hover:bg-muted transition-all duration-500 border-b-3 border-b-transparent hover:border-b-primary"
           >
             {link.label}
           </Link>
         ))}
       </div>
     </div>
-  );
-}
-
-function ListItem({
-  title,
-  children,
-  href,
-  ...props
-}: React.ComponentPropsWithoutRef<"li"> & { href: string }) {
-  return (
-    <li {...props}>
-      <NavigationMenuLink asChild>
-        <Link
-          href={href}
-          className="flex flex-row items-center justify-between rounded-none! p-4"
-        >
-          <div className="space-y-1">
-            <div>{title}</div>
-            <p className="text-muted-foreground line-clamp-2 text-sm leading-snug">
-              {children}
-            </p>
-          </div>
-          <ExternalLink />
-        </Link>
-      </NavigationMenuLink>
-    </li>
   );
 }

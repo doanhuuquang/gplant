@@ -1,6 +1,5 @@
 import { signInWithEmailAndPassword } from "@/services/account-service";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/auth/use-auth";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { type ApiErrorResponse } from "@/lib/schemas/api/api-error-response";
@@ -8,8 +7,6 @@ import { type SignInRequest } from "@/lib/schemas/auth/signin-request";
 
 export default function useSignIn() {
   const t = useTranslations("Errors");
-
-  const { refresh } = useAuth();
 
   const [isSigningIn, setIsSigningIn] = useState<boolean>(false);
   const [signInError, setSignInError] = useState<string | null>(null);
@@ -29,7 +26,6 @@ export default function useSignIn() {
         description: "You have been signed in successfully.",
       });
 
-      refresh();
       window.location.reload();
     } catch (e) {
       const err = e as ApiErrorResponse;

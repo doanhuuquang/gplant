@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import AppLogo from "@/components/shared/app-logo";
 import SearchBar from "@/components/shared/search-bar";
 import { AccountDropdown } from "@/components/shared/account-dropdown";
@@ -9,10 +10,24 @@ import { MenuMobile } from "@/components/shared/menu-mobile";
 import { Navbar } from "@/components/shared/navbar";
 import { Overlay } from "@/components/shared/overlay";
 import { ShoppingBag } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
+import { APP_PATHS } from "@/lib/constants/app-paths";
+
+function CartButton() {
+  return (
+    <Link href={APP_PATHS.SHOP_CART}>
+      <Button
+        variant={"outline"}
+        className="aspect-square rounded-full relative"
+      >
+        <ShoppingBag className="size-6" />
+      </Button>
+    </Link>
+  );
+}
 
 export default function AppHeader() {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
 
   return (
     <>
@@ -23,8 +38,9 @@ export default function AppHeader() {
 
       <header
         className={cn(
-          "w-full h-fit bg-background/90 backdrop-blur-lg sticky top-0 z-50",
-          isDropdownOpen && "border-b-border",
+          "w-full h-fit bg-background/95 backdrop-blur-xl sticky top-0 z-50 transition-all duration-300",
+          isDropdownOpen &&
+            "border-b-border bg-background transition-all duration-300",
         )}
       >
         <div className="w-full max-w-350 mx-auto p-4 flex items-center justify-between gap-10">
@@ -33,9 +49,7 @@ export default function AppHeader() {
           <SearchBar className="md:flex hidden w-full max-w-7xl" />
 
           <div className="flex items-center gap-3">
-            <Button variant={"outline"} className="aspect-square rounded-full">
-              <ShoppingBag className="size-5" />
-            </Button>
+            <CartButton />
 
             <AccountDropdown />
 

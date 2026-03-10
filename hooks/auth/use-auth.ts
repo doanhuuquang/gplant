@@ -9,13 +9,11 @@ export function useAuth() {
 
   useEffect(() => {
     if (user === null) {
-      const initAuth = async () => {
-        await refreshToken();
-        await fetchMe();
-      };
-      initAuth();
+      // Just fetch the user — the axios 401 interceptor will
+      // automatically refresh the token if the access token expired.
+      fetchMe();
     }
-  }, [user, fetchMe, refreshToken]);
+  }, [user, fetchMe]);
 
   return {
     user,

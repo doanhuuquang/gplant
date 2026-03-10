@@ -1,4 +1,4 @@
 export enum BannerGroup {
-  Carousel = 0,
-  HomePopup = 1,
+  Carousel = "Carousel",
+  HomePopup = "HomePopup",
 }

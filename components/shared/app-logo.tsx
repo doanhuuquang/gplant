@@ -18,7 +18,7 @@ interface AppLogoProps {
 }
 
 const logoDimensions: Record<LogoSize, { width: number; height: number }> = {
-  sm: { width: 32, height: 32 },
+  sm: { width: 24, height: 24 },
   md: { width: 48, height: 48 },
   lg: { width: 64, height: 64 },
 };
@@ -45,15 +45,15 @@ export default function AppLogo({
     forcedTheme === "dark"
       ? "hidden"
       : forcedTheme === "light"
-      ? "block"
-      : "dark:hidden block";
+        ? "block"
+        : "dark:hidden block";
 
   const darkLogoClass =
     forcedTheme === "light"
       ? "hidden"
       : forcedTheme === "dark"
-      ? "block"
-      : "hidden dark:block";
+        ? "block"
+        : "hidden dark:block";
 
   if (typeof variant !== "undefined") {
     return (
