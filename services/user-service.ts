@@ -22,6 +22,17 @@ const me = async (): Promise<ApiSuccessResponse> => {
   }
 };
 
+const updateProfileApi = async (
+  request: UpdateUserRequest,
+): Promise<ApiSuccessResponse> => {
+  try {
+    const response = await axiosInstance.put(`${USERS_URL}/me`, request);
+    return response.data;
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
 const getUsers = async (
   params: GetUsersParams = {},
 ): Promise<ApiSuccessResponse> => {
@@ -108,6 +119,7 @@ const toggleLockUserApi = async (id: string): Promise<ApiSuccessResponse> => {
 
 export {
   me,
+  updateProfileApi,
   getUsers,
   getUserById,
   updateUserApi,

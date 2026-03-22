@@ -138,7 +138,10 @@ export function MenuMobile({ className }: MenuMobileProps) {
     <div className={className}>
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
-          <Button variant="outline" className="aspect-square rounded-full">
+          <Button
+            variant="outline"
+            className="aspect-square rounded-full bg-background"
+          >
             <Menu className="size-6" />
           </Button>
         </SheetTrigger>

@@ -1,5 +1,6 @@
 import AppFooter from "@/components/shared/app-footer";
 import AppHeader from "@/components/shared/app-header";
+import { AppHeaderProvider } from "@/contexts/app-header-context";
 
 export default function MainLayout({
   children,
@@ -8,9 +9,11 @@ export default function MainLayout({
 }>) {
   return (
     <div className="w-full min-w-sm min-h-screen">
-      <AppHeader />
-      {children}
-      <AppFooter />
+      <AppHeaderProvider>
+        <AppHeader />
+        {children}
+        <AppFooter />
+      </AppHeaderProvider>
     </div>
   );
 }

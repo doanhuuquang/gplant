@@ -2,6 +2,7 @@ import createMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@/lib/enums/role";
+import { APP_PATHS } from "@/lib/constants/app-paths";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -46,6 +47,15 @@ export default async function middleware(request: NextRequest) {
     pathname.includes("/reset-password") ||
     pathname.includes("/recover-usernames");
 
+  const isRequireAuthPage =
+    pathname.includes(APP_PATHS.SHOP_CART) ||
+    pathname.includes(APP_PATHS.SHOP_SHIPPING) ||
+    pathname.includes(APP_PATHS.SHOP_REVIEW) ||
+    pathname.includes(APP_PATHS.SHOP_ORDER_CONFIRMATION) ||
+    pathname.includes(APP_PATHS.USER_ACCOUNT) ||
+    pathname.includes(APP_PATHS.USER_ADDRESSES) ||
+    pathname.includes(APP_PATHS.USER_ORDERS);
+
   const isLocale = locale === "vi" || locale === "en";
   const adminSegment = isLocale ? segments[1] : segments[0];
   const isAdminPath = adminSegment === "admin";
@@ -54,13 +64,15 @@ export default async function middleware(request: NextRequest) {
 
   if (isAuthPage && authToken) {
     const redirectLocale = isLocale ? locale : "";
-    return NextResponse.redirect(new URL(`/${redirectLocale}`, request.url));
+    return NextResponse.redirect(
+      new URL(`http://localhost:3000/${redirectLocale}`, request.url),
+    );
   }
 
   if (isAdminPath && !authToken) {
     const redirectLocale = isLocale ? locale : "";
     return NextResponse.redirect(
-      new URL(`/${redirectLocale}/sign-in`, request.url),
+      new URL(`http://localhost:3000/${redirectLocale}/sign-in`, request.url),
     );
   }
 
@@ -68,8 +80,17 @@ export default async function middleware(request: NextRequest) {
     const payload = decodeJwtPayload(authToken);
     if (!hasAdminRole(payload)) {
       const redirectLocale = isLocale ? locale : "";
-      return NextResponse.redirect(new URL(`/${redirectLocale}`, request.url));
+      return NextResponse.redirect(
+        new URL(`http://localhost:3000/${redirectLocale}`, request.url),
+      );
     }
+  }
+
+  if (isRequireAuthPage && !authToken) {
+    const redirectLocale = isLocale ? locale : "";
+    return NextResponse.redirect(
+      new URL(`http://localhost:3000/${redirectLocale}/sign-in`, request.url),
+    );
   }
 
   return intlMiddleware(request);

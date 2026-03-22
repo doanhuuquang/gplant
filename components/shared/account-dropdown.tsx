@@ -41,7 +41,7 @@ export function AccountDropdown({ className }: { className?: string }) {
     return (
       <Button
         variant={"outline"}
-        className={cn("aspect-square rounded-full", className)}
+        className={cn("aspect-square rounded-full bg-background", className)}
       >
         <LoaderCircle className="size-5 animate-spin" />
       </Button>
@@ -54,7 +54,7 @@ export function AccountDropdown({ className }: { className?: string }) {
         <DropdownMenuTrigger asChild className="hover:cursor-pointer">
           <Button
             variant={"outline"}
-            className="aspect-square rounded-full relative overflow-hidden"
+            className="aspect-square rounded-full relative overflow-hidden bg-background"
             onClick={(e) => {
               e.stopPropagation();
               setIsDropdownOpen(!isDropdownOpen);
@@ -112,36 +112,47 @@ export function AccountDropdown({ className }: { className?: string }) {
             <>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  Orders
-                  <DropdownMenuShortcut>
-                    <Package2 />
-                  </DropdownMenuShortcut>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  Address
-                  <DropdownMenuShortcut>
-                    <MapPin />
-                  </DropdownMenuShortcut>
-                </DropdownMenuItem>
+                <Link href={APP_PATHS.USER_ORDERS}>
+                  <DropdownMenuItem>
+                    Orders
+                    <DropdownMenuShortcut>
+                      <Package2 />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </Link>
+
+                <Link href={APP_PATHS.USER_ADDRESSES}>
+                  <DropdownMenuItem>
+                    Address
+                    <DropdownMenuShortcut>
+                      <MapPin />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </Link>
+
                 <DropdownMenuItem>
                   Whishlist
                   <DropdownMenuShortcut>
                     <Gem />
                   </DropdownMenuShortcut>
                 </DropdownMenuItem>
+
                 <DropdownMenuItem>
                   Payments
                   <DropdownMenuShortcut>
                     <CreditCard />
                   </DropdownMenuShortcut>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  Profile
-                  <DropdownMenuShortcut>
-                    <Smile />
-                  </DropdownMenuShortcut>
-                </DropdownMenuItem>
+
+                <Link href={APP_PATHS.USER_ACCOUNT}>
+                  <DropdownMenuItem>
+                    Profile
+                    <DropdownMenuShortcut>
+                      <Smile />
+                    </DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </Link>
+
                 {(user.roles.includes(Role.Admin) ||
                   user.roles.includes(Role.Manager)) && (
                   <Link href={APP_PATHS.DASHBOARD}>

@@ -14,6 +14,9 @@ export const APP_IMAGES = {
   ICON_APPLE_WHITE: "/icons/apple-white.svg",
   ICON_MICROSOFT: "/icons/microsoft.svg",
   ICON_FACEBOOK: "/icons/facebook.svg",
+  ICON_CASH: "/icons/cash.svg",
+  ICON_VNPAY: "/icons/vnpay.svg",
+  ICON_VISA: "/icons/visa.svg",
 
   HERO_SECTION_BACKGROUND:
     "/images/background-images/hero-section-background.svg",

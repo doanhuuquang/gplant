@@ -8,6 +8,7 @@ export default interface CartResponse {
   subTotal: number;
   totalDiscount: number;
   total: number;
-  treatedAtUtc: Date;
+  shippingCost: number;
+  createdAtUrc: Date;
   updatedAtUtc: Date;
 }

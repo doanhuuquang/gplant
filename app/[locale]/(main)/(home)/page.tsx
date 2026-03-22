@@ -1,15 +1,17 @@
 "use client";
 
-import BannerCarousel from "@/app/[locale]/(main)/(home)/banner-carousel";
 import LightningSaleCarousel from "@/components/shared/lightning-sale-carousel";
 import PlantCarousel from "@/components/shared/plant-carousel";
 import PopUp from "@/components/shared/pop-up";
-import { useGetOngoingLightningSales } from "@/hooks/lightning-sale/use-get-ongoing-lightning-sale";
-import { useGetPlants } from "@/hooks/plant/use-get-plants";
+import useGetBestSellingIndoorPlants from "@/hooks/plant/use-get-best-selling-indoor-plants";
 import { BannerGroup } from "@/lib/enums/banner-group";
+import { useGetOngoingLightningSales } from "@/hooks/lightning-sale/use-get-ongoing-lightning-sale";
+
+import BannerCarousel from "@/app/[locale]/(main)/(home)/banner-carousel";
 
 export default function Home() {
-  const { plants } = useGetPlants();
+  const { bestSellingIndoorPlants, isGettingBestSellingIndoorPlants } =
+    useGetBestSellingIndoorPlants();
   const { ongoingLightningSales } = useGetOngoingLightningSales();
 
   return (
@@ -24,7 +26,11 @@ export default function Home() {
             timeRemaining={ongoingLightningSales[0].timeRemaining}
           />
         )}
-        <PlantCarousel title="Best Selling Indoor Plants" plants={plants} />
+        <PlantCarousel
+          title="Best Selling Indoor Plants"
+          plants={bestSellingIndoorPlants}
+          isLoading={isGettingBestSellingIndoorPlants}
+        />
       </div>
     </main>
   );

@@ -1,21 +1,36 @@
 "use client";
 
-import { useEffect } from "react";
-import { useBannerStore } from "@/stores/banner-store";
+import BannerResponse from "@/lib/schemas/banner/banner-response";
+import { ApiErrorResponse } from "@/lib/schemas/api/api-error-response";
+import { getActiveBanners } from "@/services/banner-service";
+import { useEffect, useState } from "react";
 
 export function useGetActiveBanners() {
-  const { activeBanners, bannerError, isLoadingBanner, fetchActiveBanners } =
-    useBannerStore();
+  const [activeBanners, setActiveBanners] = useState<BannerResponse[]>([]);
+  const [isGettingActiveBanners, setIsGettingActiveBanners] =
+    useState<boolean>(true);
+  const [getActiveBannersError, setGetActiveBannersError] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
-    if (!activeBanners?.length) {
-      fetchActiveBanners();
-    }
-  }, [activeBanners?.length, fetchActiveBanners]);
+    const handleGetActiveBanners = async () => {
+      try {
+        setIsGettingActiveBanners(true);
+        setGetActiveBannersError(null);
 
-  return {
-    activeBanners,
-    isLoadingBanner,
-    bannerError,
-  };
+        const response = await getActiveBanners();
+        setActiveBanners(response.data as BannerResponse[]);
+      } catch (e) {
+        const err = e as ApiErrorResponse;
+        setGetActiveBannersError(err.message);
+      } finally {
+        setIsGettingActiveBanners(false);
+      }
+    };
+
+    handleGetActiveBanners();
+  }, []);
+
+  return { activeBanners, isGettingActiveBanners, getActiveBannersError };
 }

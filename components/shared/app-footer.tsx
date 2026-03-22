@@ -128,8 +128,8 @@ export default function AppFooter() {
   ];
 
   return (
-    <footer className="w-full h-fit bg-soft-peach">
-      <div className="w-full h-fit max-w-350 mx-auto py-10 px-4 space-y-10 bg-soft-peach">
+    <footer className="w-full h-fit bg-soft-peach border-t">
+      <div className="w-full h-fit max-w-350 mx-auto py-10 px-4 space-y-10">
         {/* Links  */}
         <div className="flex flex-wrap gap-5">
           {footerNavLinks.map((link) => (

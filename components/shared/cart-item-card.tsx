@@ -1,27 +1,31 @@
+import CartItemResponse from "@/lib/schemas/cart/cart-item-response";
+import Image from "next/image";
+import z from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Form, FormField, FormItem } from "@/components/ui/form";
+import { formatPrice, getFileUrl } from "@/utils/helpers";
 import { Input } from "@/components/ui/input";
+import { Minus, Plus, Trash2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { useGetPlantByVariant } from "@/hooks/inventory/use-get-inventory-by-variant";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useGetPlantByVariant } from "@/hooks/inventory/use-get-inventory-by-variant";
-import CartItemResponse from "@/lib/schemas/cart/cart-item-response";
-import { cn } from "@/lib/utils";
-import { formatPrice, getFileUrl } from "@/utils/helpers";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Minus, Plus, Trash2 } from "lucide-react";
-import Image from "next/image";
-import { useForm } from "react-hook-form";
-import z from "zod";
+import { useUpdateCartItemQuantity } from "@/hooks/cart/use-update-cart-item-quantity";
+import { useRemoveCartItem } from "@/hooks/cart/use-remove-cart-item";
 
 export default function CartItemCart({
   cartItem,
 }: {
   cartItem: CartItemResponse;
 }) {
+  const { handleUpdateQuantity, isUpdatingCartItem } =
+    useUpdateCartItemQuantity();
+  const { handleRemoveCartItem, isRemovingCartItem } = useRemoveCartItem();
   const { inventoryByVariant } = useGetPlantByVariant(cartItem.plantVariant.id);
 
   const imageSrc = cartItem.plant.images.find((image) => image.isPrimary)?.media
@@ -48,7 +52,7 @@ export default function CartItemCart({
   });
 
   return (
-    <main className="w-full border rounded-sm p-4 flex gap-4">
+    <main className="w-full border rounded-sm bg-background dark:bg-muted p-4 flex gap-4">
       <div>
         <Image
           src={getFileUrl(imageSrc)}
@@ -80,6 +84,7 @@ export default function CartItemCart({
                 Inc.vat
               </p>
             </div>
+
             {cartItem.isOnSale && cartItem.discountPercentage && (
               <div className="flex items-center gap-3">
                 <p className="line-through text-muted-foreground font-light text-sm">
@@ -106,14 +111,21 @@ export default function CartItemCart({
               >
                 <Button
                   size={"icon"}
+                  variant={"outline"}
                   className="bg-soft-peach hover:bg-soft-peach/50 dark:bg-muted dark:hover:bg-muted/50 text-foreground rounded-full"
-                  disabled={form.getValues("quantity") <= 1}
+                  disabled={
+                    form.getValues("quantity") <= 1 || isUpdatingCartItem
+                  }
                   onClick={() => {
                     const current = form.getValues("quantity");
-                    if (current > 1)
+                    if (current > 1) {
                       form.setValue("quantity", current - 1, {
                         shouldValidate: true,
                       });
+                      handleUpdateQuantity(cartItem.id, {
+                        quantity: current - 1,
+                      });
+                    }
                   }}
                 >
                   <Minus />
@@ -131,6 +143,11 @@ export default function CartItemCart({
                             onChange={(e) => {
                               const val = e.target.value;
                               field.onChange(val === "" ? 0 : Number(val));
+                              if (!form.formState.errors.quantity) {
+                                handleUpdateQuantity(cartItem.id, {
+                                  quantity: Number(val),
+                                });
+                              }
                             }}
                             value={field.value}
                             type="number"
@@ -146,17 +163,23 @@ export default function CartItemCart({
 
                 <Button
                   size={"icon"}
+                  variant={"outline"}
                   className="bg-soft-peach hover:bg-soft-peach/50 dark:bg-muted dark:hover:bg-muted/50 text-foreground rounded-full"
                   disabled={
                     form.getValues("quantity") >=
-                    (inventoryByVariant?.quantityAvailable ?? 0)
+                      (inventoryByVariant?.quantityAvailable ?? 0) ||
+                    isUpdatingCartItem
                   }
                   onClick={() => {
                     const current = form.getValues("quantity");
-                    if (current < 99)
+                    if (current < 99) {
                       form.setValue("quantity", current + 1, {
                         shouldValidate: true,
                       });
+                      handleUpdateQuantity(cartItem.id, {
+                        quantity: current + 1,
+                      });
+                    }
                   }}
                 >
                   <Plus />
@@ -167,6 +190,8 @@ export default function CartItemCart({
               <Button
                 variant="ghost"
                 className="h-fit! w-fit! p-0! text-muted-foreground hover:bg-transparent"
+                disabled={isRemovingCartItem}
+                onClick={() => handleRemoveCartItem(cartItem.id)}
               >
                 <Trash2 />
                 Remove

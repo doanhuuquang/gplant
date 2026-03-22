@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePlantStore } from "@/stores/plant-store";
+import PlantResponse from "@/lib/schemas/plant/plant-response";
 
 export function useGetPlants() {
   const {
@@ -20,8 +21,12 @@ export function useGetPlants() {
   } = usePlantStore();
 
   useEffect(() => {
-    fetchPlants();
-  }, [fetchPlants, pageNumber, pageSize]);
+    const getPlants = async () => {
+      await fetchPlants();
+    };
+
+    getPlants();
+  }, [pageNumber, pageSize]);
 
   return {
     plants,

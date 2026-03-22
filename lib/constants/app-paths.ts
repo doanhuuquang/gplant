@@ -4,6 +4,13 @@ export const APP_PATHS = {
   SHOP_PRODUCT: "/shop/product/",
   SHOP_CATEGORY: "/shop/category/",
   SHOP_CART: "/shop/cart",
+  SHOP_SHIPPING: "/shop/shipping",
+  SHOP_REVIEW: "/shop/review",
+  SHOP_ORDER_CONFIRMATION: "/shop/order-confirmation",
+
+  USER_ACCOUNT: "/user/account",
+  USER_ADDRESSES: "/user/addresses",
+  USER_ORDERS: "/user/orders",
 
   DASHBOARD: "/admin/dashboard",
   MEDIA_LIBRARY: "/admin/media-library",
