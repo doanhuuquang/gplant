@@ -1,8 +1,7 @@
 "use client";
 
-import CareInstructionResponse from "@/lib/schemas/care-instruction.ts/care-instruction-response";
-import { useDeleteCareInstruction } from "@/hooks/care-instruction/use-delete-care-instruction";
-
+import { CareInstructionResponse } from "@/types/care-instruction";
+import { useDeleteCareInstruction } from "@/lib/hooks/use-care-instruction";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +15,8 @@ import {
 
 interface DeleteCareInstructionDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   careInstruction: CareInstructionResponse;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
@@ -27,36 +26,37 @@ export function DeleteCareInstructionDialog({
   careInstruction,
   onSuccess,
 }: DeleteCareInstructionDialogProps) {
-  const { handleDeleteCareInstruction, isLoading } = useDeleteCareInstruction();
+  const { mutate: deleteCareInstruction, isPending } =
+    useDeleteCareInstruction();
 
-  const onConfirmDelete = async () => {
-    const success = await handleDeleteCareInstruction(careInstruction.id);
-    if (success) {
-      onOpenChange(false);
-      onSuccess?.();
-    }
+  const handleDeleteCareInstruction = async () => {
+    deleteCareInstruction(careInstruction.id, {
+      onSuccess: () => {
+        onOpenChange(false);
+        onSuccess?.();
+      },
+    });
   };
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete care instruction</AlertDialogTitle>
+          <AlertDialogTitle>Xóa hướng dẫn chăm sóc</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this care instruction (
-            <strong>{careInstruction.lightRequirement}</strong>)? This action
-            cannot be undone. Care instructions used by plants cannot be
-            deleted.
+            Bạn có chắc muốn xóa hướng dẫn chăm sóc (
+            <strong>{careInstruction.lightRequirement}</strong>)? Hành động này
+            không thể hoàn tác. Hướng dẫn đã được cây sử dụng thì không thể xóa.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirmDelete}
-            disabled={isLoading}
+            onClick={handleDeleteCareInstruction}
+            disabled={isPending}
             className="bg-destructive text-white hover:bg-destructive/90"
           >
-            {isLoading ? "Deleting..." : "Delete"}
+            {isPending ? "Đang xóa..." : "Xóa"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

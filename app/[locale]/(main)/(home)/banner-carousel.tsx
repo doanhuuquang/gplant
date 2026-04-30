@@ -7,8 +7,7 @@ import { BannerGroup } from "@/lib/enums/banner-group";
 import { cn } from "@/lib/utils";
 import { getFileUrl } from "@/utils/helpers";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetActiveBanners } from "@/hooks/banner/use-get-active-banners";
-
+import { useActiveBanners } from "@/lib/hooks/use-banner";
 import {
   Carousel,
   CarouselContent,
@@ -26,7 +25,7 @@ function SkeletonCarousel() {
 }
 
 export default function BannerCarousel({ className }: { className?: string }) {
-  const { activeBanners, isGettingActiveBanners } = useGetActiveBanners();
+  const { data, isLoading } = useActiveBanners();
 
   return (
     <div className={cn("w-full", className)}>
@@ -43,10 +42,10 @@ export default function BannerCarousel({ className }: { className?: string }) {
         className="w-full relative rounded-sm overflow-hidden"
       >
         <CarouselContent className="ml-0">
-          {isGettingActiveBanners ? (
+          {isLoading ? (
             <SkeletonCarousel />
           ) : (
-            activeBanners.map(
+            data?.data.map(
               (banner) =>
                 banner.group === BannerGroup.Carousel && (
                   <CarouselItem key={banner.id} className="basis-full pl-0">

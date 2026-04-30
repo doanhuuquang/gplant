@@ -1,12 +1,16 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
-import { useEffect, useMemo } from "react";
-
 import { Button } from "@/components/ui/button";
+import { CreateLightningSaleItemRequest } from "@/types/lightning-sale";
+import { CreateLightningSaleItemRequestValidation } from "@/validations/lightning-sale";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { useCreateLightningSaleItem } from "@/lib/hooks/use-lightning-sale";
+import { useForm } from "react-hook-form";
+import { useMemo } from "react";
+import { usePlants } from "@/lib/hooks/use-plant";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -32,25 +36,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { useAddSaleItem } from "@/hooks/lightning-sale/use-add-sale-item";
-import { usePlantStore } from "@/stores/plant-store";
 
-const addSaleItemSchema = z.object({
-  plantVariantId: z.string().min(1, "Please select a plant variant"),
-  salePrice: z.number().positive("Sale price must be greater than 0"),
-  quantityLimit: z
-    .number()
-    .int()
-    .positive("Quantity limit must be greater than 0"),
-});
-
-type AddSaleItemFormValues = z.infer<typeof addSaleItemSchema>;
+type AddSaleItemFormValues = z.infer<
+  typeof CreateLightningSaleItemRequestValidation
+>;
 
 interface AddSaleItemDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   saleId: string;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function AddSaleItemDialog({
@@ -58,22 +52,17 @@ export function AddSaleItemDialog({
   onOpenChange,
   saleId,
 }: AddSaleItemDialogProps) {
-  const { handleAddSaleItem, isLoading } = useAddSaleItem();
-  const { plants, fetchPlants } = usePlantStore();
-
-  useEffect(() => {
-    if (open && !plants?.length) {
-      fetchPlants({ pageSize: 1000 });
-    }
-  }, [open, plants?.length, fetchPlants]);
+  const { mutate: createLightningSaleItem, isPending } =
+    useCreateLightningSaleItem();
+  const { data } = usePlants();
 
   const plantsWithVariants = useMemo(
-    () => plants.filter((p) => p.variants?.length > 0),
-    [plants],
+    () => data?.data.items.filter((p) => p.variants?.length > 0),
+    [data],
   );
 
   const form = useForm<AddSaleItemFormValues>({
-    resolver: zodResolver(addSaleItemSchema),
+    resolver: zodResolver(CreateLightningSaleItemRequestValidation),
     defaultValues: {
       plantVariantId: "",
       salePrice: 0,
@@ -86,27 +75,33 @@ export function AddSaleItemDialog({
   };
 
   async function onSubmit(values: AddSaleItemFormValues) {
-    const success = await handleAddSaleItem(saleId, {
+    const request: CreateLightningSaleItemRequest = {
       plantVariantId: values.plantVariantId,
       salePrice: values.salePrice,
       quantityLimit: values.quantityLimit,
-    });
+    };
 
-    if (success) {
-      resetForm();
-      onOpenChange(false);
-    }
+    createLightningSaleItem(
+      {
+        lightningSaleId: saleId,
+        data: request,
+      },
+      {
+        onSuccess: () => {
+          resetForm();
+          onOpenChange(false);
+        },
+      },
+    );
   }
-
-  const busy = isLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-125">
         <DialogHeader>
-          <DialogTitle>Add Sale Item</DialogTitle>
+          <DialogTitle>Thêm sản phẩm khuyến mãi</DialogTitle>
           <DialogDescription>
-            Add a plant variant to this lightning sale.
+            Thêm một biến thể cây vào chương trình lightning sale này.
           </DialogDescription>
         </DialogHeader>
 
@@ -115,29 +110,29 @@ export function AddSaleItemDialog({
             <FormField
               control={form.control}
               name="plantVariantId"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Plant Variant</FormLabel>
+                  <FormLabel>Biến thể cây</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    disabled={busy}
+                    disabled={isPending}
                   >
                     <FormControl>
                       <SelectTrigger className="h-12! w-full rounded-sm shadow-none">
-                        <SelectValue placeholder="Select a variant" />
+                        <SelectValue placeholder="Chọn biến thể" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="max-h-72">
-                      {plantsWithVariants.map((plant) => (
+                      {plantsWithVariants?.map((plant) => (
                         <SelectGroup key={plant.id}>
                           <SelectLabel className="text-xs text-muted-foreground">
                             {plant.name}
                           </SelectLabel>
                           {plant.variants.map((variant) => (
                             <SelectItem key={variant.id} value={variant.id}>
-                              {variant.sku} — Size {variant.size} —{" "}
+                              {variant.sku} — Kích thước {variant.size} —{" "}
                               {new Intl.NumberFormat("vi-VN", {
                                 style: "currency",
                                 currency: "VND",
@@ -156,14 +151,14 @@ export function AddSaleItemDialog({
             <FormField
               control={form.control}
               name="salePrice"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Sale Price (VND)</FormLabel>
+                  <FormLabel>Giá sale (VND)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
-                      placeholder="Enter sale price"
+                      placeholder="Nhập giá sale"
                       {...field}
                       value={field.value || ""}
                       onChange={(e) => {
@@ -180,14 +175,14 @@ export function AddSaleItemDialog({
             <FormField
               control={form.control}
               name="quantityLimit"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity Limit</FormLabel>
+                  <FormLabel>Giới hạn số lượng</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
-                      placeholder="Max quantity to sell"
+                      placeholder="Số lượng bán tối đa"
                       {...field}
                       value={field.value || ""}
                       onChange={(e) => {
@@ -209,13 +204,15 @@ export function AddSaleItemDialog({
                   resetForm();
                   onOpenChange(false);
                 }}
-                disabled={busy}
+                disabled={isPending}
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit" disabled={busy}>
-                {busy && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-                Add Item
+              <Button type="submit" disabled={isPending}>
+                {isPending && (
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
+                )}
+                Thêm sản phẩm
               </Button>
             </DialogFooter>
           </form>

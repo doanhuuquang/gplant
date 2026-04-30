@@ -1,35 +1,38 @@
 "use client";
 
-import LightningSaleCarousel from "@/components/shared/lightning-sale-carousel";
-import PlantCarousel from "@/components/shared/plant-carousel";
-import PopUp from "@/components/shared/pop-up";
-import useGetBestSellingIndoorPlants from "@/hooks/plant/use-get-best-selling-indoor-plants";
+import LightningSaleCarousel from "@/components/feature/lightning-sale/lightning-sale-carousel";
+import PlantCarousel from "@/components/feature/plant/plant-carousel";
+import PopUp from "@/components/common/pop-up";
 import { BannerGroup } from "@/lib/enums/banner-group";
-import { useGetOngoingLightningSales } from "@/hooks/lightning-sale/use-get-ongoing-lightning-sale";
+import { useOngoingLightningSales } from "@/lib/hooks/use-lightning-sale";
+import { usePlants } from "@/lib/hooks/use-plant";
 
 import BannerCarousel from "@/app/[locale]/(main)/(home)/banner-carousel";
 
 export default function Home() {
-  const { bestSellingIndoorPlants, isGettingBestSellingIndoorPlants } =
-    useGetBestSellingIndoorPlants();
-  const { ongoingLightningSales } = useGetOngoingLightningSales();
+  const {
+    data: bestSellingIndoorPlants,
+    isLoading: isLoadingBestSellingIndoorPlants,
+  } = usePlants();
+  const { data: ongoingLightningSales } = useOngoingLightningSales();
 
   return (
     <main className="w-full space-y-4">
       <PopUp popUpPage={BannerGroup.HomePopup} />
       <div className="w-full max-w-350 mx-auto p-4 space-y-10">
         <BannerCarousel />
-        {ongoingLightningSales.length > 0 && (
-          <LightningSaleCarousel
-            title={ongoingLightningSales[0].name}
-            lightningSaleItems={ongoingLightningSales[0].items}
-            timeRemaining={ongoingLightningSales[0].timeRemaining}
-          />
-        )}
+        {ongoingLightningSales?.data &&
+          ongoingLightningSales?.data.length > 0 && (
+            <LightningSaleCarousel
+              title={ongoingLightningSales.data[0].name}
+              lightningSaleItems={ongoingLightningSales.data[0].items}
+              timeRemaining={ongoingLightningSales.data[0].timeRemaining}
+            />
+          )}
         <PlantCarousel
-          title="Best Selling Indoor Plants"
-          plants={bestSellingIndoorPlants}
-          isLoading={isGettingBestSellingIndoorPlants}
+          title="Cây trồng trong nhà bán chạy"
+          plants={bestSellingIndoorPlants?.data.items || []}
+          isLoading={isLoadingBestSellingIndoorPlants}
         />
       </div>
     </main>

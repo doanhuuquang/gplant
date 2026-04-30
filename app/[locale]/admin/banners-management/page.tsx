@@ -1,16 +1,15 @@
 "use client";
 
+import { BannerGroup } from "@/lib/enums/banner-group";
 import { Button } from "@/components/ui/button";
 import { CirclePlus, Search } from "lucide-react";
+import { ColumnFiltersState } from "@tanstack/react-table";
 import { columns } from "./columns";
 import { CreateBannerDialog } from "./create-banner-dialog";
 import { DataTable } from "@/components/ui/data-table";
-import { useGetBanners } from "@/hooks/banner/use-get-banners";
+import { useAdminHeader } from "@/lib/hooks/use-admin-header";
+import { useBanners } from "@/lib/hooks/use-banner";
 import { useMemo, useState } from "react";
-import { useAdminHeader } from "@/hooks/use-admin-header";
-import { BannerGroup } from "@/lib/enums/banner-group";
-import { ColumnFiltersState } from "@tanstack/react-table";
-
 import {
   InputGroup,
   InputGroupAddon,
@@ -26,11 +25,18 @@ import {
 
 const ALL_GROUPS = "all";
 
+const getGroupLabel = (group: BannerGroup) => {
+  if (group === BannerGroup.Carousel) return "Băng chuyền";
+  if (group === BannerGroup.HomePopup) return "Popup trang chủ";
+  return group;
+};
+
 export default function BannersManagementPage() {
-  const { banners } = useGetBanners();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>(ALL_GROUPS);
+
+  const { data, isLoading } = useBanners();
 
   const columnFilters: ColumnFiltersState = useMemo(() => {
     const filters: ColumnFiltersState = [];
@@ -45,7 +51,7 @@ export default function BannersManagementPage() {
       <>
         <InputGroup className="w-full max-w-xl border-transparent bg-muted dark:bg-background">
           <InputGroupInput
-            placeholder="Search..."
+            placeholder="Tìm kiếm..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -56,13 +62,13 @@ export default function BannersManagementPage() {
 
         <Select value={groupFilter} onValueChange={setGroupFilter}>
           <SelectTrigger className="h-12! rounded-sm shadow-none">
-            <SelectValue placeholder="All Groups" />
+            <SelectValue placeholder="Tất cả nhóm" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_GROUPS}>All Groups</SelectItem>
+            <SelectItem value={ALL_GROUPS}>Tất cả nhóm</SelectItem>
             {Object.values(BannerGroup).map((group) => (
               <SelectItem key={group} value={group}>
-                {group}
+                {getGroupLabel(group)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -87,7 +93,8 @@ export default function BannersManagementPage() {
     <>
       <DataTable
         columns={columns}
-        data={banners}
+        data={data?.data || []}
+        isLoading={isLoading}
         globalFilter={searchQuery}
         columnFilters={columnFilters}
       />

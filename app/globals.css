@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "mapbox-gl/dist/mapbox-gl.css";
+@import "@fortawesome/fontawesome-svg-core/styles.css";
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant neon (&:is(.neon *));
@@ -119,6 +121,10 @@
   --sidebar-ring: oklch(0.556 0 0);
 
   --soft-peach: #2d2520;
+}
+
+@utility no-scrollbar {
+  @apply [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
 }
 
 @layer base {

@@ -5,10 +5,10 @@ import { ChevronLeft, ChevronRight, CirclePlus, Search } from "lucide-react";
 import { columns } from "./columns";
 import { CreatePlantDialog } from "./create-plant-dialog";
 import { DataTable } from "@/components/ui/data-table";
-import { useGetPlants } from "@/hooks/plant/use-get-plants";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { useAdminHeader } from "@/lib/hooks/use-admin-header";
 import { useMemo, useState } from "react";
-import { useAdminHeader } from "@/hooks/use-admin-header";
-
+import { usePlants } from "@/lib/hooks/use-plant";
 import {
   InputGroup,
   InputGroupAddon,
@@ -22,26 +22,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Field, FieldLabel } from "@/components/ui/field";
 
 export default function PlantsManagementPage() {
-  const {
-    plants,
-    hasNextPage,
-    hasPreviousPage,
-    setPageNumber,
-    setPageSize,
-    pageNumber,
-  } = useGetPlants();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { data, isLoading } = usePlants({
+    pageNumber: page,
+    pageSize: pageSize,
+  });
 
   const headerActions = useMemo(
     () => (
       <>
         <InputGroup className="w-full max-w-xl border-transparent bg-muted dark:bg-background">
           <InputGroupInput
-            placeholder="Search..."
+            placeholder="Tìm kiếm..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -67,11 +65,18 @@ export default function PlantsManagementPage() {
 
   return (
     <>
-      <DataTable columns={columns} data={plants} globalFilter={searchQuery} />
+      <DataTable
+        columns={columns}
+        data={data?.data.items || []}
+        isLoading={isLoading}
+        globalFilter={searchQuery}
+      />
 
       <div className="flex items-center justify-between gap-4">
         <Field orientation="horizontal" className="w-fit">
-          <FieldLabel htmlFor="select-rows-per-page">Rows per page</FieldLabel>
+          <FieldLabel htmlFor="select-rows-per-page">
+            Số dòng mỗi trang
+          </FieldLabel>
           <Select
             defaultValue="10"
             onValueChange={(value) => setPageSize(Number(value))}
@@ -93,16 +98,16 @@ export default function PlantsManagementPage() {
           <Button
             variant="outline"
             size={"icon"}
-            disabled={!hasPreviousPage}
-            onClick={() => setPageNumber(pageNumber - 1)}
+            disabled={!data?.data.hasPreviousPage}
+            onClick={() => setPage(page - 1)}
           >
             <ChevronLeft />
           </Button>
           <Button
             variant="outline"
             size={"icon"}
-            disabled={!hasNextPage}
-            onClick={() => setPageNumber(pageNumber + 1)}
+            disabled={!data?.data.hasNextPage}
+            onClick={() => setPage(page + 1)}
           >
             <ChevronRight />
           </Button>

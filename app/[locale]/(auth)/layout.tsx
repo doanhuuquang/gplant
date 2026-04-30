@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-
-import AuthFooter from "@/components/shared/app-footer";
-import AuthHeader from "@/components/shared/auth/auth-header";
+import AppFooter from "@/components/common/app-footer";
+import AuthHeader from "@/components/feature/auth/auth-header";
 
 export default function AuthLayout({
   children,
@@ -14,7 +13,7 @@ export default function AuthLayout({
         <AuthHeader />
       </div>
       <div className={"w-full flex flex-col flex-1"}>{children}</div>
-      <AuthFooter />
+      <AppFooter />
     </div>
   );
 }

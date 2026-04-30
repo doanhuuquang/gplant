@@ -1,8 +1,8 @@
 import createMiddleware from "next-intl/middleware";
-import { routing } from "./i18n/routing";
+import { APP_PATHS } from "@/lib/constants/app-paths";
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@/lib/enums/role";
-import { APP_PATHS } from "@/lib/constants/app-paths";
+import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -42,10 +42,10 @@ export default async function middleware(request: NextRequest) {
   const locale = segments[0];
 
   const isAuthPage =
-    pathname.includes("/sign-in") ||
-    pathname.includes("/sign-up") ||
-    pathname.includes("/reset-password") ||
-    pathname.includes("/recover-usernames");
+    pathname.includes(APP_PATHS.SIGN_IN) ||
+    pathname.includes(APP_PATHS.SIGN_UP) ||
+    pathname.includes(APP_PATHS.RESET_PASSWORD) ||
+    pathname.includes(APP_PATHS.RECOVER_USERNAME);
 
   const isRequireAuthPage =
     pathname.includes(APP_PATHS.SHOP_CART) ||
@@ -70,9 +70,8 @@ export default async function middleware(request: NextRequest) {
   }
 
   if (isAdminPath && !authToken) {
-    const redirectLocale = isLocale ? locale : "";
     return NextResponse.redirect(
-      new URL(`http://localhost:3000/${redirectLocale}/sign-in`, request.url),
+      new URL(`http://localhost:3000/sign-in`, request.url),
     );
   }
 
@@ -87,9 +86,8 @@ export default async function middleware(request: NextRequest) {
   }
 
   if (isRequireAuthPage && !authToken) {
-    const redirectLocale = isLocale ? locale : "";
     return NextResponse.redirect(
-      new URL(`http://localhost:3000/${redirectLocale}/sign-in`, request.url),
+      new URL(`http://localhost:3000/sign-in`, request.url),
     );
   }
 

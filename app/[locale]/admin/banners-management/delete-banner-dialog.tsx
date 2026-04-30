@@ -1,8 +1,7 @@
 "use client";
 
-import BannerResponse from "@/lib/schemas/banner/banner-response";
-import { useDeleteBanner } from "@/hooks/banner/use-delete-banner";
-
+import { BannerResponse } from "@/types/banner";
+import { useDeleteBanner } from "@/lib/hooks/use-banner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +15,8 @@ import {
 
 interface DeleteBannerDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   banner: BannerResponse;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function DeleteBannerDialog({
@@ -25,33 +24,31 @@ export function DeleteBannerDialog({
   onOpenChange,
   banner,
 }: DeleteBannerDialogProps) {
-  const { handleDeleteBanner, isLoading } = useDeleteBanner();
+  const { mutate: deleteBanner, isPending } = useDeleteBanner();
 
-  const onConfirmDelete = async () => {
-    const success = await handleDeleteBanner(banner.id);
-    if (success) {
-      onOpenChange(false);
-    }
-  };
+  const handleDelete = () =>
+    deleteBanner(banner.id, {
+      onSuccess: () => onOpenChange(false),
+    });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete banner</AlertDialogTitle>
+          <AlertDialogTitle>Xóa banner</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete the banner{" "}
-            <strong>{banner.title}</strong>? This action cannot be undone.
+            Bạn có chắc muốn xóa banner
+            <strong>{banner.title}</strong>? Hành động này không thể hoàn tác.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirmDelete}
-            disabled={isLoading}
+            onClick={() => handleDelete()}
+            disabled={isPending}
             className="bg-destructive text-white hover:bg-destructive/90"
           >
-            {isLoading ? "Deleting..." : "Delete"}
+            {isPending ? "Đang xóa..." : "Xóa"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

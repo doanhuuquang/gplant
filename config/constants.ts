@@ -1,5 +1,3 @@
-// Application constants
-
 export const APP_NAME = "GPlant";
 export const APP_DESCRIPTION = "Next.js Application";
 

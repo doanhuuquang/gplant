@@ -1,14 +1,19 @@
 "use client";
 
 import Image from "next/image";
+import { APP_PATHS } from "@/lib/constants/app-paths";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CreateVariantDialog } from "./create-variant-dialog";
+import { EditVariantDialog } from "./edit-variant-dialog";
 import { getFileUrl } from "@/utils/helpers";
+import { PlantVariantResponse } from "@/types/plant";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetPlantBySlug } from "@/hooks/plant/use-get-plant-by-slug";
-import { useParams } from "next/navigation";
+import { useAdminHeader } from "@/lib/hooks/use-admin-header";
 import { useMemo, useState } from "react";
-
+import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
@@ -22,26 +27,16 @@ import {
   SquarePen,
   StickyNote,
   Sun,
-  Tag,
   Thermometer,
   Trash2,
 } from "lucide-react";
-import { useAdminHeader } from "@/hooks/use-admin-header";
-import { useRouter } from "next/navigation";
 import { EditPlantDialog } from "@/app/[locale]/admin/plants-management/edit-plant-dialog";
 import { DeletePlantDialog } from "@/app/[locale]/admin/plants-management/delete-plant-dialog";
-import { APP_PATHS } from "@/lib/constants/app-paths";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { PlantVariantResponse } from "@/lib/schemas/plant/plant-variant-response";
-import { CreateVariantDialog } from "./create-variant-dialog";
-import { EditVariantDialog } from "./edit-variant-dialog";
-import { useDeletePlantVariant } from "@/hooks/plant/use-delete-plant-variant";
-import { useTogglePlantVariant } from "@/hooks/plant/use-toggle-plant-variant";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,32 +54,39 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
+import {
+  useDeletePlantVariant,
+  usePlantBySlug,
+  useToggleActivePlantVariant,
+} from "@/lib/hooks/use-plant";
 
 export default function PlantDetailPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
-  const { plant, isLoading, error, refetch } = useGetPlantBySlug(slug);
+
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-
-  /* ── Variant management state ─────────────── */
   const [createVariantOpen, setCreateVariantOpen] = useState(false);
   const [editingVariant, setEditingVariant] =
     useState<PlantVariantResponse | null>(null);
   const [deletingVariant, setDeletingVariant] =
     useState<PlantVariantResponse | null>(null);
-  const { handleToggleVariant: toggleVariant, isLoading: toggleLoading } =
-    useTogglePlantVariant();
-  const { handleDeleteVariant: deleteVariant, isLoading: deleteLoading } =
-    useDeletePlantVariant();
-  const variantActionLoading = toggleLoading || deleteLoading;
-
-  /* ── Gallery state ────────────────────────── */
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  /* ── Formatters ───────────────────────────── */
+  const {
+    data: plantBySlugResponse,
+    isLoading,
+    error,
+    refetch,
+  } = usePlantBySlug(slug);
+  const { mutate: toggleVariant, isPending: toggleLoading } =
+    useToggleActivePlantVariant();
+  const { mutate: deleteVariant, isPending: deleteLoading } =
+    useDeletePlantVariant();
+
+  const variantActionLoading = toggleLoading || deleteLoading;
+
   const formatDate = (date: Date | string) =>
     new Intl.DateTimeFormat("vi-VN", {
       dateStyle: "medium",
@@ -98,22 +100,15 @@ export default function PlantDetailPage() {
       currency: "VND",
     }).format(v);
 
-  /* ── Variant actions ──────────────────────── */
   const handleToggleVariant = async (variant: PlantVariantResponse) => {
-    const success = await toggleVariant(variant.id, variant.isActive);
-    if (success) refetch();
+    toggleVariant(variant.id);
   };
 
   const handleDeleteVariant = async () => {
     if (!deletingVariant) return;
-    const success = await deleteVariant(
-      deletingVariant.id,
-      deletingVariant.sku,
-    );
-    if (success) {
-      setDeletingVariant(null);
-      refetch();
-    }
+    deleteVariant(deletingVariant.id, {
+      onSuccess: () => setDeletingVariant(null),
+    });
   };
 
   const headerActions = useMemo(
@@ -131,7 +126,7 @@ export default function PlantDetailPage() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Edit</p>
+            <p>Chỉnh sửa</p>
           </TooltipContent>
         </Tooltip>
 
@@ -147,41 +142,43 @@ export default function PlantDetailPage() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Delete</p>
+            <p>Xóa</p>
           </TooltipContent>
         </Tooltip>
 
-        {plant && (
+        {plantBySlugResponse?.data && (
           <>
             <EditPlantDialog
               open={editOpen}
               onOpenChange={setEditOpen}
-              plant={plant}
-              onSuccess={refetch}
+              plant={plantBySlugResponse?.data}
             />
+
             <DeletePlantDialog
               open={deleteOpen}
               onOpenChange={setDeleteOpen}
-              plant={plant}
+              plant={plantBySlugResponse?.data}
               onSuccess={() => router.push(APP_PATHS.PLANTS_MANAGEMENT)}
             />
           </>
         )}
       </>
     ),
-    [editOpen, deleteOpen, plant, refetch, router],
+    [editOpen, deleteOpen, plantBySlugResponse, router],
   );
 
   useAdminHeader(headerActions);
 
-  if (!plant && !isLoading && !error) return null;
+  if (!plantBySlugResponse && !isLoading && !error) return null;
 
   /* ── Image helpers ────────────────────────── */
-  const primaryImage = plant?.images?.find((i) => i.isPrimary);
-  const sortedImages = plant?.images
+  const primaryImage = plantBySlugResponse?.data?.images?.find(
+    (i) => i.isPrimary,
+  );
+  const sortedImages = plantBySlugResponse?.data?.images
     ? [
         ...(primaryImage ? [primaryImage] : []),
-        ...plant.images.filter((i) => !i.isPrimary),
+        ...plantBySlugResponse.data.images.filter((i) => !i.isPrimary),
       ]
     : [];
   const selectedImage = sortedImages[selectedImageIndex] ?? null;
@@ -195,7 +192,7 @@ export default function PlantDetailPage() {
     <div className="flex flex-1 flex-col gap-6">
       {error && (
         <div className="rounded-sm border border-destructive/50 bg-destructive/5 p-3 text-destructive text-sm">
-          {error}
+          {error.message}
         </div>
       )}
 
@@ -209,66 +206,82 @@ export default function PlantDetailPage() {
         </div>
       )}
 
-      {!isLoading && plant && (
+      {!isLoading && plantBySlugResponse && (
         <div className="grid gap-2 lg:grid-cols-[1fr_420px]">
           {/* ── LEFT ─────────────────────────────── */}
           <div className="flex flex-col gap-2">
             {/* Basic info card */}
             <div className="rounded-sm border bg-card p-4">
-              <h2 className="text-sm font-semibold mb-5">Basic Details</h2>
+              <h2 className="text-sm font-semibold mb-5">Thông tin cơ bản</h2>
 
               <div className="space-y-4">
                 <div className="grid grid-cols-[100px_1fr] items-start gap-x-4 text-sm">
-                  <span className="text-muted-foreground">Name</span>
-                  <span>{plant.name}</span>
+                  <span className="text-muted-foreground">Tên</span>
+                  <span>{plantBySlugResponse?.data.name}</span>
                 </div>
 
                 <div className="grid grid-cols-[100px_1fr] items-start gap-x-4 text-sm">
                   <span className="text-muted-foreground">Slug</span>
-                  <span>/{plant.slug}</span>
+                  <span>/{plantBySlugResponse?.data.slug}</span>
                 </div>
 
-                {plant.category && (
+                {plantBySlugResponse?.data.category && (
                   <div className="grid grid-cols-[100px_1fr] items-center gap-x-4 text-sm">
-                    <span className="text-muted-foreground">Category</span>
-                    <span>{plant.category.name}</span>
+                    <span className="text-muted-foreground">Danh mục</span>
+                    <span>{plantBySlugResponse?.data.category.name}</span>
                   </div>
                 )}
 
-                {(plant.minPrice != null || plant.maxPrice != null) && (
+                {(plantBySlugResponse?.data.minPrice != null ||
+                  plantBySlugResponse?.data.maxPrice != null) && (
                   <div className="grid grid-cols-[100px_1fr] items-center gap-x-4 text-sm">
-                    <span className="text-muted-foreground">Price</span>
+                    <span className="text-muted-foreground">Giá</span>
                     <span className="text-base">
-                      {plant.minPrice === plant.maxPrice
-                        ? formatPrice(plant.minPrice!)
-                        : `${formatPrice(plant.minPrice!)} – ${formatPrice(plant.maxPrice!)}`}
+                      {plantBySlugResponse?.data.minPrice != null &&
+                      plantBySlugResponse?.data.maxPrice != null ? (
+                        plantBySlugResponse.data.minPrice ===
+                        plantBySlugResponse.data.maxPrice ? (
+                          formatPrice(plantBySlugResponse.data.minPrice)
+                        ) : (
+                          `${formatPrice(plantBySlugResponse.data.minPrice)} – ${formatPrice(plantBySlugResponse.data.maxPrice)}`
+                        )
+                      ) : (
+                        <span className="italic text-muted-foreground">
+                          Chưa có giá
+                        </span>
+                      )}
                     </span>
                   </div>
                 )}
 
                 <div className="grid grid-cols-[100px_1fr] items-start gap-x-4 text-sm">
-                  <span className="text-muted-foreground">Created</span>
-                  <span>{formatDate(plant.createdAtUtc)}</span>
+                  <span className="text-muted-foreground">Ngày tạo</span>
+                  <span>
+                    {formatDate(plantBySlugResponse?.data.createdAtUtc)}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-[100px_1fr] items-start gap-x-4 text-sm">
-                  <span className="text-muted-foreground">Updated</span>
-                  <span>{formatDate(plant.updatedAtUtc)}</span>
+                  <span className="text-muted-foreground">Cập nhật</span>
+                  <span>
+                    {formatDate(plantBySlugResponse?.data.updatedAtUtc)}
+                  </span>
                 </div>
               </div>
 
-              {(plant.shortDescription || plant.description) && (
+              {(plantBySlugResponse?.data.shortDescription ||
+                plantBySlugResponse?.data.description) && (
                 <>
                   <Separator className="my-5" />
-                  {plant.shortDescription && (
+                  {plantBySlugResponse?.data.shortDescription && (
                     <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                      {plant.shortDescription}
+                      {plantBySlugResponse?.data.shortDescription}
                     </p>
                   )}
                   <p className="text-sm leading-relaxed whitespace-pre-line">
-                    {plant.description || (
+                    {plantBySlugResponse?.data.description || (
                       <span className="italic text-muted-foreground">
-                        No description provided.
+                        Chưa có mô tả.
                       </span>
                     )}
                   </p>
@@ -280,12 +293,13 @@ export default function PlantDetailPage() {
             <div className="rounded-sm border bg-card overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-semibold">Variants</h2>
-                  {plant.variants && plant.variants.length > 0 && (
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      ({plant.variants.length})
-                    </span>
-                  )}
+                  <h2 className="text-sm font-semibold">Biến thể</h2>
+                  {plantBySlugResponse?.data.variants &&
+                    plantBySlugResponse?.data.variants.length > 0 && (
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        ({plantBySlugResponse?.data.variants.length})
+                      </span>
+                    )}
                 </div>
                 <Button
                   variant={"outline"}
@@ -293,11 +307,12 @@ export default function PlantDetailPage() {
                   className="h-9"
                 >
                   <CirclePlus className="size-4" />
-                  Add
+                  Thêm
                 </Button>
               </div>
 
-              {plant.variants && plant.variants.length > 0 ? (
+              {plantBySlugResponse?.data.variants &&
+              plantBySlugResponse?.data.variants.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -306,24 +321,26 @@ export default function PlantDetailPage() {
                           SKU
                         </th>
                         <th className="px-4 py-2.5 text-left font-medium">
-                          Size
+                          Kích thước
                         </th>
                         <th className="px-4 py-2.5 text-right font-medium">
-                          Price
+                          Giá
                         </th>
                         <th className="px-4 py-2.5 text-center font-medium">
-                          Status
+                          Trạng thái
                         </th>
                         <th className="px-4 py-2.5 text-center font-medium w-12"></th>
                       </tr>
                     </thead>
                     <tbody>
-                      {plant.variants.map((v, idx) => (
+                      {plantBySlugResponse?.data.variants.map((v, idx) => (
                         <tr
                           key={v.id}
                           className={cn(
                             "transition-colors hover:bg-muted/30",
-                            idx < plant.variants.length - 1 && "border-b",
+                            idx <
+                              plantBySlugResponse?.data.variants.length - 1 &&
+                              "border-b",
                           )}
                         >
                           <td className="px-4 py-3">
@@ -344,7 +361,7 @@ export default function PlantDetailPage() {
                                   : "bg-red-500/10 text-red-600 dark:text-red-400",
                               )}
                             >
-                              {v.isActive ? "Active" : "Inactive"}
+                              {v.isActive ? "Đang bật" : "Đang tắt"}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
@@ -364,13 +381,13 @@ export default function PlantDetailPage() {
                                   onClick={() => setEditingVariant(v)}
                                 >
                                   <Pencil className="size-4 mr-2" />
-                                  Edit
+                                  Chỉnh sửa
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleToggleVariant(v)}
                                 >
                                   <Power className="size-4 mr-2" />
-                                  {v.isActive ? "Deactivate" : "Activate"}
+                                  {v.isActive ? "Tắt" : "Bật"}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -378,7 +395,7 @@ export default function PlantDetailPage() {
                                   onClick={() => setDeletingVariant(v)}
                                 >
                                   <Trash2 className="size-4 mr-2" />
-                                  Delete
+                                  Xóa
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -390,44 +407,49 @@ export default function PlantDetailPage() {
                 </div>
               ) : (
                 <div className="px-4 pb-4 text-center text-sm text-muted-foreground">
-                  No variants yet. Click &quot;Add&quot; to create one.
+                  Chưa có biến thể nào. Nhấn &quot;Thêm&quot; để tạo.
                 </div>
               )}
             </div>
 
             {/* Care Instructions */}
-            {plant.careInstruction && (
+            {plantBySlugResponse?.data.careInstruction && (
               <div className="rounded-sm border bg-card p-4">
                 <h2 className="text-sm font-semibold mb-4">
-                  Care Instructions
+                  Hướng dẫn chăm sóc
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
                     {
                       icon: Sun,
-                      label: "Light",
-                      value: plant.careInstruction.lightRequirement,
+                      label: "Ánh sáng",
+                      value:
+                        plantBySlugResponse?.data.careInstruction
+                          .lightRequirement,
                       color: "text-amber-500",
                       bg: "bg-amber-50 dark:bg-amber-500/10",
                     },
                     {
                       icon: Droplets,
-                      label: "Water",
-                      value: plant.careInstruction.wateringFrequency,
+                      label: "Nước",
+                      value:
+                        plantBySlugResponse?.data.careInstruction
+                          .wateringFrequency,
                       color: "text-sky-500",
                       bg: "bg-sky-50 dark:bg-sky-500/10",
                     },
                     {
                       icon: Thermometer,
-                      label: "Temperature",
-                      value: plant.careInstruction.temperature,
+                      label: "Nhiệt độ",
+                      value:
+                        plantBySlugResponse?.data.careInstruction.temperature,
                       color: "text-rose-500",
                       bg: "bg-rose-50 dark:bg-rose-500/10",
                     },
                     {
                       icon: Leaf,
-                      label: "Soil",
-                      value: plant.careInstruction.soil,
+                      label: "Đất",
+                      value: plantBySlugResponse?.data.careInstruction.soil,
                       color: "text-emerald-500",
                       bg: "bg-emerald-50 dark:bg-emerald-500/10",
                     },
@@ -446,11 +468,11 @@ export default function PlantDetailPage() {
                     </div>
                   ))}
                 </div>
-                {plant.careInstruction.notes && (
+                {plantBySlugResponse?.data.careInstruction.notes && (
                   <div className="mt-4 flex items-start gap-2.5 rounded-sm bg-muted/60 p-3.5">
                     <StickyNote className="size-4 shrink-0 text-muted-foreground mt-0.5" />
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      {plant.careInstruction.notes}
+                      {plantBySlugResponse?.data.careInstruction.notes}
                     </p>
                   </div>
                 )}
@@ -461,13 +483,13 @@ export default function PlantDetailPage() {
           {/* ── RIGHT ────────────────────────────── */}
           <div className="flex flex-col gap-6 lg:sticky lg:top-4 lg:self-start">
             <div className="rounded-sm border bg-card p-4">
-              <h2 className="text-sm font-semibold mb-4">Product Images</h2>
+              <h2 className="text-sm font-semibold mb-4">Hình ảnh sản phẩm</h2>
 
               <div className="relative aspect-4/3 w-full overflow-hidden rounded-sm bg-muted">
                 {selectedImage?.media?.fileUrl ? (
                   <Image
                     src={getFileUrl(selectedImage.media.fileUrl)}
-                    alt={plant.name}
+                    alt={plantBySlugResponse?.data.name}
                     fill
                     className="object-contain"
                     unoptimized
@@ -475,7 +497,7 @@ export default function PlantDetailPage() {
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
                     <ImageOff className="size-10 opacity-30" />
-                    <span className="text-xs">No image available</span>
+                    <span className="text-xs">Không có hình ảnh</span>
                   </div>
                 )}
 
@@ -517,7 +539,7 @@ export default function PlantDetailPage() {
                       {img.media?.fileUrl ? (
                         <Image
                           src={getFileUrl(img.media.fileUrl)}
-                          alt={`Thumbnail ${idx + 1}`}
+                          alt={`Ảnh thu nhỏ ${idx + 1}`}
                           fill
                           className="object-cover"
                           unoptimized
@@ -529,7 +551,7 @@ export default function PlantDetailPage() {
                       )}
                       {idx === 0 && primaryImage && (
                         <span className="absolute inset-x-0 bottom-0 bg-primary text-primary-foreground text-[7px] font-semibold text-center py-px uppercase tracking-wider">
-                          Primary
+                          Chính
                         </span>
                       )}
                     </button>
@@ -542,11 +564,11 @@ export default function PlantDetailPage() {
       )}
 
       {/* ── Variant dialogs ──────────────────── */}
-      {plant && (
+      {plantBySlugResponse?.data && (
         <CreateVariantDialog
           open={createVariantOpen}
           onOpenChange={setCreateVariantOpen}
-          plantId={plant.id}
+          plantId={plantBySlugResponse?.data.id}
           onSuccess={refetch}
         />
       )}
@@ -566,23 +588,23 @@ export default function PlantDetailPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Variant</AlertDialogTitle>
+            <AlertDialogTitle>Xóa biến thể</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete variant{" "}
-              <strong>{deletingVariant?.sku}</strong>? This action cannot be
-              undone.
+              Bạn có chắc muốn xóa biến thể{" "}
+              <strong>{deletingVariant?.sku}</strong>? Thao tác này không thể
+              hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={variantActionLoading}>
-              Cancel
+              Hủy
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteVariant}
               disabled={variantActionLoading}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Xóa
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

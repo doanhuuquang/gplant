@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { PlantVariantResponse } from "@/types/plant";
+import { Switch } from "@/components/ui/switch";
+import { UpdatePlantVariantRequestValidation } from "@/validations/plant";
+import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { useUpdatePlantVariant } from "@/lib/hooks/use-plant";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -23,24 +27,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { useUpdatePlantVariant } from "@/hooks/plant/use-update-plant-variant";
-import { PlantVariantResponse } from "@/lib/schemas/plant/plant-variant-response";
 
-const editVariantSchema = z.object({
-  sku: z.string().min(1, "SKU is required"),
-  price: z.number().positive("Price must be greater than 0"),
-  size: z.number().positive("Size must be greater than 0"),
-  isActive: z.boolean(),
-});
-
-type EditVariantFormValues = z.infer<typeof editVariantSchema>;
+type EditVariantFormValues = z.infer<
+  typeof UpdatePlantVariantRequestValidation
+>;
 
 interface EditVariantDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   variant: PlantVariantResponse;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
@@ -50,10 +45,12 @@ export function EditVariantDialog({
   variant,
   onSuccess,
 }: EditVariantDialogProps) {
-  const { handleUpdateVariant, isLoading } = useUpdatePlantVariant();
+  const [prevVariant, setPrevVariant] = useState(variant);
+
+  const { mutate: updatePlantVariant, isPending } = useUpdatePlantVariant();
 
   const form = useForm<EditVariantFormValues>({
-    resolver: zodResolver(editVariantSchema),
+    resolver: zodResolver(UpdatePlantVariantRequestValidation),
     defaultValues: {
       sku: variant.sku,
       price: variant.price,
@@ -62,8 +59,6 @@ export function EditVariantDialog({
     },
   });
 
-  // Sync form when variant prop changes
-  const [prevVariant, setPrevVariant] = useState(variant);
   if (variant !== prevVariant) {
     setPrevVariant(variant);
     form.reset({
@@ -75,26 +70,31 @@ export function EditVariantDialog({
   }
 
   async function onSubmit(values: EditVariantFormValues) {
-    const success = await handleUpdateVariant(variant.id, {
+    const request = {
       sku: values.sku,
       price: values.price,
       size: values.size,
       isActive: values.isActive,
-    });
+    };
 
-    if (success) {
-      onSuccess?.();
-      onOpenChange(false);
-    }
+    updatePlantVariant(
+      { id: variant.id, request: request },
+      {
+        onSuccess: () => {
+          onSuccess?.();
+          onOpenChange(false);
+        },
+      },
+    );
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Variant</DialogTitle>
+          <DialogTitle>Chỉnh sửa biến thể</DialogTitle>
           <DialogDescription>
-            Update the variant details below.
+            Cập nhật thông tin biến thể bên dưới.
           </DialogDescription>
         </DialogHeader>
 
@@ -103,12 +103,12 @@ export function EditVariantDialog({
             <FormField
               control={form.control}
               name="sku"
-              disabled={isLoading}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>SKU</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. PLT-001-S" {...field} />
+                    <Input placeholder="Ví dụ: PLT-001-S" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -119,10 +119,10 @@ export function EditVariantDialog({
               <FormField
                 control={form.control}
                 name="price"
-                disabled={isLoading}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price (VND)</FormLabel>
+                    <FormLabel>Giá (VND)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -139,10 +139,10 @@ export function EditVariantDialog({
               <FormField
                 control={form.control}
                 name="size"
-                disabled={isLoading}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Size (cm)</FormLabel>
+                    <FormLabel>Kích thước (cm)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -162,12 +162,12 @@ export function EditVariantDialog({
               name="isActive"
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-sm border p-3">
-                  <FormLabel className="cursor-pointer">Active</FormLabel>
+                  <FormLabel className="cursor-pointer">Kích hoạt</FormLabel>
                   <FormControl>
                     <Switch
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      disabled={isLoading}
+                      disabled={isPending}
                     />
                   </FormControl>
                 </FormItem>
@@ -179,15 +179,15 @@ export function EditVariantDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isLoading}
+                disabled={isPending}
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && (
+              <Button type="submit" disabled={isPending}>
+                {isPending && (
                   <LoaderCircle className="mr-2 size-4 animate-spin" />
                 )}
-                Save Changes
+                Lưu thay đổi
               </Button>
             </DialogFooter>
           </form>

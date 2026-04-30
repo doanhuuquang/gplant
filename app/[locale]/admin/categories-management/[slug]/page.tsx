@@ -1,18 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { ImageOff, SquarePen, Trash2 } from "lucide-react";
+import { APP_PATHS } from "@/lib/constants/app-paths";
+import { Button } from "@/components/ui/button";
 import { getFileUrl } from "@/utils/helpers";
+import { ImageOff, SquarePen, Trash2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { useGetCategoryBySlug } from "@/hooks/category/use-get-category-by-slug";
-import { useAdminHeader } from "@/hooks/use-admin-header";
-import { useParams, useRouter } from "next/navigation";
+import { useAdminHeader } from "@/lib/hooks/use-admin-header";
+import { useCategoryBySlug } from "@/lib/hooks/use-category";
 import { useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { EditCategoryDialog } from "@/app/[locale]/admin/categories-management/edit-category-dialog";
 import { DeleteCategoryDialog } from "@/app/[locale]/admin/categories-management/delete-category-dialog";
-import { APP_PATHS } from "@/lib/constants/app-paths";
 import {
   Tooltip,
   TooltipContent,
@@ -23,11 +23,11 @@ export default function Page() {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
-  const { categoryBySlug, getCategoryBySlugError, isLoadingCategoryBySlug } =
-    useGetCategoryBySlug(slug);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const { data, isLoading, error } = useCategoryBySlug(slug);
 
   const headerActions = useMemo(
     () => (
@@ -44,7 +44,7 @@ export default function Page() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Edit</p>
+            <p>Chỉnh sửa</p>
           </TooltipContent>
         </Tooltip>
 
@@ -60,43 +60,43 @@ export default function Page() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Delete</p>
+            <p>Xóa</p>
           </TooltipContent>
         </Tooltip>
 
-        {categoryBySlug && (
+        {data?.data && (
           <>
             <EditCategoryDialog
               open={editOpen}
               onOpenChange={setEditOpen}
-              category={categoryBySlug}
+              category={data.data}
             />
             <DeleteCategoryDialog
               open={deleteOpen}
               onOpenChange={setDeleteOpen}
-              category={categoryBySlug}
+              category={data.data}
               onSuccess={() => router.push(APP_PATHS.CATEGORIES_MANAGEMENT)}
             />
           </>
         )}
       </>
     ),
-    [editOpen, deleteOpen, categoryBySlug, router],
+    [editOpen, deleteOpen, data, router],
   );
 
   useAdminHeader(headerActions);
 
-  if (!categoryBySlug) return;
+  if (!data?.data) return;
 
   return (
     <div className="flex flex-1 flex-col gap-2">
-      {getCategoryBySlugError && (
+      {error && (
         <div className="rounded-sm border border-destructive bg-destructive/10 p-4 text-destructive text-sm">
-          {getCategoryBySlugError}
+          {error.message}
         </div>
       )}
 
-      {isLoadingCategoryBySlug && (
+      {isLoading && (
         <div className="rounded-sm border bg-background p-4">
           <div className="grid gap-6 md:grid-cols-[300px_1fr]">
             <Skeleton className="aspect-square w-full rounded-sm" />
@@ -114,14 +114,14 @@ export default function Page() {
         </div>
       )}
 
-      {!isLoadingCategoryBySlug && categoryBySlug && (
+      {!isLoading && data.data && (
         <div className="rounded-sm border bg-background p-4">
           <div className="grid gap-6 md:grid-cols-[300px_1fr]">
             <div className="relative aspect-square w-full overflow-hidden rounded-sm border bg-muted">
-              {categoryBySlug.media ? (
+              {data.data.media ? (
                 <Image
-                  src={getFileUrl(categoryBySlug.media.fileUrl)}
-                  alt={categoryBySlug.name}
+                  src={getFileUrl(data.data.media.fileUrl)}
+                  alt={data.data.name}
                   fill
                   className="object-cover"
                   unoptimized
@@ -135,41 +135,39 @@ export default function Page() {
 
             <div className="space-y-4">
               <div>
-                <h1 className="text-2xl font-semibold">
-                  {categoryBySlug.name}
-                </h1>
+                <h1 className="text-2xl font-semibold">{data.data.name}</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  /{categoryBySlug.slug}
+                  /{data.data.slug}
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
                 <span
                   className={`inline-flex items-center rounded-sm px-2.5 py-0.5 text-xs font-medium ${
-                    categoryBySlug.isActive
+                    data.data.isActive
                       ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                       : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                   }`}
                 >
-                  {categoryBySlug.isActive ? "Active" : "Inactive"}
+                  {data.data.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
                 </span>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                  Description
+                  Mô tả
                 </h3>
                 <p className="text-sm leading-relaxed">
-                  {categoryBySlug.description || "No description provided."}
+                  {data.data.description || "Chưa có mô tả."}
                 </p>
               </div>
 
-              {categoryBySlug.parentId && (
+              {data.data.parentId && (
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                    Parent ID
+                    ID danh mục cha
                   </h3>
-                  <p className="text-sm">{categoryBySlug.parentId}</p>
+                  <p className="text-sm">{data.data.parentId}</p>
                 </div>
               )}
 
@@ -177,8 +175,8 @@ export default function Page() {
 
               <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-muted-foreground">
                 <div>
-                  <span className="font-medium">Created: </span>
-                  {new Date(categoryBySlug.createdAtUtc).toLocaleDateString(
+                  <span className="font-medium">Ngày tạo: </span>
+                  {new Date(data.data.createdAtUtc).toLocaleDateString(
                     "vi-VN",
                     {
                       year: "numeric",
@@ -190,8 +188,8 @@ export default function Page() {
                   )}
                 </div>
                 <div>
-                  <span className="font-medium">Updated: </span>
-                  {new Date(categoryBySlug.updatedAtUtc).toLocaleDateString(
+                  <span className="font-medium">Cập nhật: </span>
+                  {new Date(data.data.updatedAtUtc).toLocaleDateString(
                     "vi-VN",
                     {
                       year: "numeric",
@@ -205,8 +203,8 @@ export default function Page() {
               </div>
 
               <div className="text-xs text-muted-foreground">
-                <span className="font-medium">ID: </span>
-                {categoryBySlug.id}
+                <span className="font-medium">Mã ID: </span>
+                {data.data.id}
               </div>
             </div>
           </div>

@@ -1,11 +1,17 @@
-import LoaderFullScreen from "@/components/shared/loader-full-screen";
+import LoaderFullScreen from "@/components/common/loader-full-screen";
 import localFont from "next/font/local";
 import { config } from "@fortawesome/fontawesome-svg-core";
+import { Roboto } from "next/font/google";
 import { LoaderProvider } from "@/contexts/loader-context";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import "@fortawesome/fontawesome-svg-core/styles.css";
+
+const roboto = Roboto({
+  subsets: ["latin"],
+});
+
 import type { Metadata } from "next";
 
 config.autoAddCss = false;
@@ -62,7 +68,7 @@ export default function RootLayout({
 }>) {
   return (
     <html suppressHydrationWarning>
-      <body className={`${nohemi.variable} ${nohemi.className} antialiased`}>
+      <body className={`${nohemi.variable} ${roboto.className} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <LoaderProvider>
             {children}

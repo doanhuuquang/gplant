@@ -1,11 +1,15 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { CreateCareInstructionRequest } from "@/types/care-instruction";
+import { CreateCareInstructionRequestValidation } from "@/validations/care-instruction";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { useCreateCareInstruction } from "@/lib/hooks/use-care-instruction";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -22,20 +26,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useCreateCareInstruction } from "@/hooks/care-instruction/use-create-care-instruction";
-
-const createCareInstructionSchema = z.object({
-  lightRequirement: z.string().min(1, "Light requirement is required"),
-  wateringFrequency: z.string().min(1, "Watering frequency is required"),
-  temperature: z.string().min(1, "Temperature is required"),
-  soil: z.string().min(1, "Soil information is required"),
-  notes: z.string().min(1, "Notes are required"),
-});
 
 type CreateCareInstructionFormValues = z.infer<
-  typeof createCareInstructionSchema
+  typeof CreateCareInstructionRequestValidation
 >;
 
 interface CreateCareInstructionDialogProps {
@@ -47,10 +40,11 @@ export function CreateCareInstructionDialog({
   open,
   onOpenChange,
 }: CreateCareInstructionDialogProps) {
-  const { handleCreateCareInstruction, isLoading } = useCreateCareInstruction();
+  const { mutate: createCareInstruction, isPending } =
+    useCreateCareInstruction();
 
   const form = useForm<CreateCareInstructionFormValues>({
-    resolver: zodResolver(createCareInstructionSchema),
+    resolver: zodResolver(CreateCareInstructionRequestValidation),
     defaultValues: {
       lightRequirement: "",
       wateringFrequency: "",
@@ -65,29 +59,29 @@ export function CreateCareInstructionDialog({
   };
 
   async function onSubmit(values: CreateCareInstructionFormValues) {
-    const success = await handleCreateCareInstruction({
+    const request: CreateCareInstructionRequest = {
       lightRequirement: values.lightRequirement,
       wateringFrequency: values.wateringFrequency,
       temperature: values.temperature,
       soil: values.soil,
       notes: values.notes,
+    };
+
+    createCareInstruction(request, {
+      onSuccess: () => {
+        resetForm();
+        onOpenChange(false);
+      },
     });
-
-    if (success) {
-      resetForm();
-      onOpenChange(false);
-    }
   }
-
-  const busy = isLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-125 max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Create Care Instruction</DialogTitle>
+          <DialogTitle>Tạo hướng dẫn chăm sóc</DialogTitle>
           <DialogDescription>
-            Fill in the details below to create a new care instruction.
+            Điền thông tin bên dưới để tạo hướng dẫn chăm sóc mới.
           </DialogDescription>
         </DialogHeader>
 
@@ -100,13 +94,13 @@ export function CreateCareInstructionDialog({
               <FormField
                 control={form.control}
                 name="lightRequirement"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Light Requirement</FormLabel>
+                    <FormLabel>Nhu cầu ánh sáng</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. Full sun, Partial shade"
+                        placeholder="Ví dụ: Nắng đầy đủ, Bóng râm một phần"
                         {...field}
                       />
                     </FormControl>
@@ -118,13 +112,13 @@ export function CreateCareInstructionDialog({
               <FormField
                 control={form.control}
                 name="wateringFrequency"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Watering Frequency</FormLabel>
+                    <FormLabel>Tần suất tưới nước</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. Once a week, Twice a week"
+                        placeholder="Ví dụ: 1 lần/tuần, 2 lần/tuần"
                         {...field}
                       />
                     </FormControl>
@@ -136,12 +130,12 @@ export function CreateCareInstructionDialog({
               <FormField
                 control={form.control}
                 name="temperature"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Temperature</FormLabel>
+                    <FormLabel>Nhiệt độ</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. 18-24°C" {...field} />
+                      <Input placeholder="Ví dụ: 18-24°C" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -151,13 +145,13 @@ export function CreateCareInstructionDialog({
               <FormField
                 control={form.control}
                 name="soil"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Soil</FormLabel>
+                    <FormLabel>Đất</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. Well-drained, Sandy loam"
+                        placeholder="Ví dụ: Thoát nước tốt, đất cát pha"
                         {...field}
                       />
                     </FormControl>
@@ -169,13 +163,13 @@ export function CreateCareInstructionDialog({
               <FormField
                 control={form.control}
                 name="notes"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>Ghi chú</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Additional care notes"
+                        placeholder="Ghi chú chăm sóc thêm"
                         className="min-h-25"
                         {...field}
                       />
@@ -194,13 +188,18 @@ export function CreateCareInstructionDialog({
                   resetForm();
                   onOpenChange(false);
                 }}
-                disabled={busy}
+                disabled={isPending}
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit" disabled={busy}>
-                {busy && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-                Create
+              <Button
+                type="submit"
+                disabled={isPending || !form.formState.isValid}
+              >
+                {isPending && (
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
+                )}
+                Tạo
               </Button>
             </DialogFooter>
           </form>

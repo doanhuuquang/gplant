@@ -1,28 +1,29 @@
 "use client";
 
-import ShippingAddressList from "@/components/shared/shipping-address-list";
-import ShippingAddressResponse from "@/lib/schemas/shipping-address/shipping-address-response";
+import ShippingAddressList from "@/components/feature/shipping-address/shipping-address-list";
 import { APP_PATHS } from "@/lib/constants/app-paths";
 import { Button } from "@/components/ui/button";
 import { MoveRight } from "lucide-react";
-import { useAuthStore } from "@/stores/auth-store";
+import { ShippingAddressResponse } from "@/types/shipping-address";
+import { useAuthStore } from "@/lib/stores/auth-store";
 import { useEffect, useState } from "react";
-import { useGetShippingAddressesByUserId } from "@/hooks/shipping-address/use-get-shipping-addresses-by-userid";
 import { useRouter } from "next/navigation";
+import { useShippingAddresses } from "@/lib/hooks/use-shipping-address";
 
 export default function Page() {
   const router = useRouter();
-  const { user } = useAuthStore();
-  const { shippingAddresses } = useGetShippingAddressesByUserId(user?.id ?? "");
 
   const [selectedShippingAddress, setSelectedShippingAddress] =
     useState<ShippingAddressResponse | null>(null);
 
+  const { user } = useAuthStore();
+  const { data: shippingAddresses } = useShippingAddresses(user?.id ?? "");
+
   useEffect(() => {
     const setDefaultShippingAddress = () => {
-      if (shippingAddresses.length === 0) return;
+      if (shippingAddresses?.data.length === 0) return;
 
-      const primaryAddress = shippingAddresses.find(
+      const primaryAddress = shippingAddresses?.data.find(
         (address) => address.isPrimary,
       );
 
@@ -34,9 +35,10 @@ export default function Page() {
 
   return (
     <main className="w-full max-w-350 mx-auto px-4 space-y-5">
-      <p className="text-xl font-semibold">Shipping address</p>
+      <p className="text-xl font-semibold">Địa chỉ giao hàng</p>
       <ShippingAddressList
-        shippingAddresses={shippingAddresses}
+        userId={user?.id ?? ""}
+        shippingAddresses={shippingAddresses?.data || []}
         redirectUrl={APP_PATHS.SHOP_SHIPPING}
         selectedShippingAddress={selectedShippingAddress}
         onSelectAddress={setSelectedShippingAddress}
@@ -51,7 +53,7 @@ export default function Page() {
             );
           }}
         >
-          CONTINUE <MoveRight />
+          TIẾP TỤC <MoveRight />
         </Button>
       </div>
     </main>

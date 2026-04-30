@@ -14,6 +14,7 @@ export const APP_PATHS = {
 
   DASHBOARD: "/admin/dashboard",
   MEDIA_LIBRARY: "/admin/media-library",
+  MEDIA_LIBRARY_FOLDERS: "/admin/media-library/folders",
   USERS_MANAGEMENT: "/admin/users-management",
   CATEGORIES_MANAGEMENT: "/admin/categories-management",
   CARE_INSTRUCTIONS_MANAGEMENT: "/admin/care-instructions-management",
@@ -21,9 +22,12 @@ export const APP_PATHS = {
   BANNERS_MANAGEMENT: "/admin/banners-management",
   INVENTORY_MANAGEMENT: "/admin/inventory-management",
   LIGHTNING_SALES_MANAGEMENT: "/admin/lightning-sales-management",
+  ORDERS_MANAGEMENT: "/admin/orders-management",
 
   SIGN_IN: "/sign-in",
   SIGN_UP: "/sign-up",
   RECOVER_USERNAME: "/recover-usernames",
   RESET_PASSWORD: "/reset-password",
+  RESET_PASSWORD_VERIFY_OTP: "/reset-password/verify-otp",
+  RESET_PASSWORD_NEW: "/reset-password/new",
 };

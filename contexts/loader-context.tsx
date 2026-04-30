@@ -1,6 +1,6 @@
 "use client";
 
-import { useLoader } from "@/hooks/use-loader";
+import { useLoader } from "@/lib/hooks/use-loader";
 import { createContext, useContext } from "react";
 
 interface LoaderContextProps {

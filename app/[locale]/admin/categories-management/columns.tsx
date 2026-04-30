@@ -1,38 +1,41 @@
 "use client";
 
-import CategoryResponse from "@/lib/schemas/category/category-response";
 import Link from "next/link";
 import { APP_PATHS } from "@/lib/constants/app-paths";
 import { ArrowUpDown, ExternalLink, SquarePen, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CategoryResponse } from "@/types/category";
 import { ColumnDef, Row } from "@tanstack/react-table";
 import { DeleteCategoryDialog } from "./delete-category-dialog";
 import { EditCategoryDialog } from "./edit-category-dialog";
 import { Switch } from "@/components/ui/switch";
-import { useGetCategoryById } from "@/hooks/category/use-get-category-by-id";
 import { useState } from "react";
-import { useToggleActiveCategory } from "@/hooks/category/use-toggle-active-category";
-
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  useCategoryById,
+  useToggleActiveCategory,
+} from "@/lib/hooks/use-category";
 
 function ActiveSwitchCell({ row }: { row: Row<CategoryResponse> }) {
-  const { handleToggleActiveCategory } = useToggleActiveCategory();
+  const { mutate: toggleActiveCategory, isPending } = useToggleActiveCategory();
+
   return (
     <Switch
+      disabled={isPending}
       defaultChecked={row.original.isActive}
-      onCheckedChange={() => handleToggleActiveCategory(row.original.id)}
+      onCheckedChange={() => toggleActiveCategory(row.original.id)}
     />
   );
 }
 
 function ParentCategoryCell({ row }: { row: Row<CategoryResponse> }) {
-  const { categoryById } = useGetCategoryById(row.original.parentId);
+  const { data } = useCategoryById(row.original.parentId || "");
 
-  return <p>{categoryById?.name ?? "_"}</p>;
+  return <p>{data?.data?.name ?? "_"}</p>;
 }
 
 function ActionsCell({ row }: { row: Row<CategoryResponse> }) {
@@ -52,7 +55,7 @@ function ActionsCell({ row }: { row: Row<CategoryResponse> }) {
           </Link>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Details</p>
+          <p>Chi tiết</p>
         </TooltipContent>
       </Tooltip>
 
@@ -67,7 +70,7 @@ function ActionsCell({ row }: { row: Row<CategoryResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Edit</p>
+          <p>Chỉnh sửa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -82,7 +85,7 @@ function ActionsCell({ row }: { row: Row<CategoryResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Delete</p>
+          <p>Xóa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -108,7 +111,7 @@ export const columns: ColumnDef<CategoryResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Category Name
+          Tên danh mục
           <Button
             variant="ghost"
             size={"icon"}
@@ -123,11 +126,11 @@ export const columns: ColumnDef<CategoryResponse>[] = [
   },
   {
     accessorKey: "description",
-    header: "Description",
+    header: "Mô tả",
   },
   {
     id: "parentName",
-    header: "Parent Category",
+    header: "Danh mục cha",
     cell: ({ row }) => <ParentCategoryCell row={row} />,
   },
   {
@@ -135,7 +138,7 @@ export const columns: ColumnDef<CategoryResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Created At
+          Ngày tạo
           <Button
             variant="ghost"
             size={"icon"}
@@ -160,12 +163,12 @@ export const columns: ColumnDef<CategoryResponse>[] = [
   },
   {
     accessorKey: "isActive",
-    header: "Active",
+    header: "Kích hoạt",
     cell: ({ row }) => <ActiveSwitchCell row={row} />,
   },
   {
     id: "actions",
-    header: "Actions",
+    header: "Thao tác",
     cell: ({ row }) => <ActionsCell row={row} />,
   },
 ];

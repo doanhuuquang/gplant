@@ -1,11 +1,15 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { CreateLightningSaleRequest } from "@/types/lightning-sale";
+import { CreateLightningSaleRequestValidation } from "@/validations/lightning-sale";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { useCreateLightningSale } from "@/lib/hooks/use-lightning-sale";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -22,27 +26,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useCreateLightningSale } from "@/hooks/lightning-sale/use-create-lightning-sale";
 
-const createLightningSaleSchema = z
-  .object({
-    name: z.string().min(1, "Name is required"),
-    description: z.string().min(1, "Description is required"),
-    startDateUtc: z.string().min(1, "Start date is required"),
-    endDateUtc: z.string().min(1, "End date is required"),
-  })
-  .refine((data) => new Date(data.endDateUtc) > new Date(data.startDateUtc), {
-    message: "End date must be after start date",
-    path: ["endDateUtc"],
-  })
-  .refine((data) => new Date(data.endDateUtc) > new Date(), {
-    message: "End date must be in the future",
-    path: ["endDateUtc"],
-  });
-
-type CreateLightningSaleFormValues = z.infer<typeof createLightningSaleSchema>;
+type CreateLightningSaleFormValues = z.infer<
+  typeof CreateLightningSaleRequestValidation
+>;
 
 interface CreateLightningSaleDialogProps {
   open: boolean;
@@ -53,10 +40,10 @@ export function CreateLightningSaleDialog({
   open,
   onOpenChange,
 }: CreateLightningSaleDialogProps) {
-  const { handleCreateLightningSale, isLoading } = useCreateLightningSale();
+  const { mutate: createLightningSale, isPending } = useCreateLightningSale();
 
   const form = useForm<CreateLightningSaleFormValues>({
-    resolver: zodResolver(createLightningSaleSchema),
+    resolver: zodResolver(CreateLightningSaleRequestValidation),
     defaultValues: {
       name: "",
       description: "",
@@ -70,28 +57,28 @@ export function CreateLightningSaleDialog({
   };
 
   async function onSubmit(values: CreateLightningSaleFormValues) {
-    const success = await handleCreateLightningSale({
+    const request: CreateLightningSaleRequest = {
       name: values.name,
       description: values.description,
       startDateUtc: new Date(values.startDateUtc).toISOString(),
       endDateUtc: new Date(values.endDateUtc).toISOString(),
+    };
+
+    createLightningSale(request, {
+      onSuccess: () => {
+        resetForm();
+        onOpenChange(false);
+      },
     });
-
-    if (success) {
-      resetForm();
-      onOpenChange(false);
-    }
   }
-
-  const busy = isLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-125 max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Create Lightning Sale</DialogTitle>
+          <DialogTitle>Tạo lightning sale</DialogTitle>
           <DialogDescription>
-            Fill in the details below to create a new lightning sale event.
+            Điền thông tin bên dưới để tạo chương trình lightning sale mới.
           </DialogDescription>
         </DialogHeader>
 
@@ -104,12 +91,12 @@ export function CreateLightningSaleDialog({
               <FormField
                 control={form.control}
                 name="name"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Tên</FormLabel>
                     <FormControl>
-                      <Input placeholder="Sale name" {...field} />
+                      <Input placeholder="Tên chương trình" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -119,13 +106,13 @@ export function CreateLightningSaleDialog({
               <FormField
                 control={form.control}
                 name="description"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Mô tả</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Sale description"
+                        placeholder="Mô tả chương trình"
                         className="resize-none"
                         {...field}
                       />
@@ -138,10 +125,10 @@ export function CreateLightningSaleDialog({
               <FormField
                 control={form.control}
                 name="startDateUtc"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Start Date</FormLabel>
+                    <FormLabel>Ngày bắt đầu</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>
@@ -153,10 +140,10 @@ export function CreateLightningSaleDialog({
               <FormField
                 control={form.control}
                 name="endDateUtc"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>End Date</FormLabel>
+                    <FormLabel>Ngày kết thúc</FormLabel>
                     <FormControl>
                       <Input type="datetime-local" {...field} />
                     </FormControl>
@@ -174,13 +161,15 @@ export function CreateLightningSaleDialog({
                   resetForm();
                   onOpenChange(false);
                 }}
-                disabled={busy}
+                disabled={isPending}
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit" disabled={busy}>
-                {busy && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-                Create
+              <Button type="submit" disabled={isPending}>
+                {isPending && (
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
+                )}
+                Tạo
               </Button>
             </DialogFooter>
           </form>

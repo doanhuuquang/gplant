@@ -1,13 +1,20 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { useState } from "react";
-import { ImagePlus, LoaderCircle, X } from "lucide-react";
-import { getFileUrl } from "@/utils/helpers";
-
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { CreateCategoryRequest } from "@/types/category";
+import { CreateCategoryRequestValidation } from "@/validations/category";
+import { getFileUrl } from "@/utils/helpers";
+import { ImagePlus, LoaderCircle, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MediaPickerDialog } from "@/components/feature/media/media-picker-dialog";
+import { MediaResponse } from "@/types/media";
+import { Textarea } from "@/components/ui/textarea";
+import { useCategories, useCreateCategory } from "@/lib/hooks/use-category";
+import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -24,8 +31,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -33,19 +38,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCreateCategory } from "@/hooks/category/use-create-category";
-import { useGetCategories } from "@/hooks/category/use-get-categories";
-import { MediaPickerDialog } from "@/components/shared/media-picker-dialog";
-import MediaResponse from "@/lib/schemas/media/media-response";
-import Image from "next/image";
 
-const createCategorySchema = z.object({
-  name: z.string().min(1, "Category name is required"),
-  description: z.string().min(1, "Description is required"),
-  parentId: z.string().optional(),
-});
-
-type CreateCategoryFormValues = z.infer<typeof createCategorySchema>;
+type CreateCategoryFormValues = z.infer<typeof CreateCategoryRequestValidation>;
 
 interface CreateCategoryDialogProps {
   open: boolean;
@@ -56,18 +50,20 @@ export function CreateCategoryDialog({
   open,
   onOpenChange,
 }: CreateCategoryDialogProps) {
-  const { handleCreateCategory, isLoading } = useCreateCategory();
-  const { categories } = useGetCategories();
   const [selectedMedia, setSelectedMedia] = useState<MediaResponse | null>(
     null,
   );
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
 
+  const { mutate: creatCategory, isPending } = useCreateCategory();
+  const { data } = useCategories();
+
   const form = useForm<CreateCategoryFormValues>({
-    resolver: zodResolver(createCategorySchema),
+    resolver: zodResolver(CreateCategoryRequestValidation),
     defaultValues: {
       name: "",
       description: "",
+      mediaId: undefined,
       parentId: undefined,
     },
   });
@@ -82,29 +78,29 @@ export function CreateCategoryDialog({
   };
 
   async function onSubmit(values: CreateCategoryFormValues) {
-    const success = await handleCreateCategory({
+    const request: CreateCategoryRequest = {
       name: values.name,
       description: values.description,
       mediaId: selectedMedia?.id,
       parentId: values.parentId || undefined,
+    };
+
+    creatCategory(request, {
+      onSuccess: () => {
+        resetForm();
+        onOpenChange(false);
+      },
     });
-
-    if (success) {
-      resetForm();
-      onOpenChange(false);
-    }
   }
-
-  const busy = isLoading;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-125 max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Create Category</DialogTitle>
+            <DialogTitle>Tạo danh mục</DialogTitle>
             <DialogDescription>
-              Fill in the details below to create a new category.
+              Điền thông tin bên dưới để tạo danh mục mới.
             </DialogDescription>
           </DialogHeader>
 
@@ -116,7 +112,7 @@ export function CreateCategoryDialog({
               <div className="flex-1 overflow-y-auto space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {/* Image Selection */}
                 <div className="space-y-2">
-                  <FormLabel>Image (optional)</FormLabel>
+                  <FormLabel>Hình ảnh (tùy chọn)</FormLabel>
                   <div className="flex items-center gap-4">
                     {selectedMedia ? (
                       <div className="relative size-24 rounded-sm overflow-hidden border">
@@ -130,7 +126,7 @@ export function CreateCategoryDialog({
                         <button
                           type="button"
                           onClick={removeImage}
-                          disabled={busy}
+                          disabled={isPending}
                           className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80 transition-colors"
                         >
                           <X className="size-3.5" />
@@ -140,11 +136,11 @@ export function CreateCategoryDialog({
                       <button
                         type="button"
                         onClick={() => setMediaPickerOpen(true)}
-                        disabled={busy}
+                        disabled={isPending}
                         className="flex size-24 flex-col items-center justify-center gap-1 rounded-sm border border-dashed border-muted-foreground/50 text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
                       >
                         <ImagePlus className="size-6" />
-                        <span className="text-xs">Choose</span>
+                        <span className="text-xs">Chọn</span>
                       </button>
                     )}
                     {selectedMedia && (
@@ -152,10 +148,10 @@ export function CreateCategoryDialog({
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={busy}
+                        disabled={isPending}
                         onClick={() => setMediaPickerOpen(true)}
                       >
-                        Change
+                        Đổi ảnh
                       </Button>
                     )}
                   </div>
@@ -164,12 +160,12 @@ export function CreateCategoryDialog({
                 <FormField
                   control={form.control}
                   name="name"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel>Tên</FormLabel>
                       <FormControl>
-                        <Input placeholder="Category name" {...field} />
+                        <Input placeholder="Tên danh mục" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -179,13 +175,13 @@ export function CreateCategoryDialog({
                 <FormField
                   control={form.control}
                   name="description"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Mô tả</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Category description"
+                          placeholder="Mô tả danh mục"
                           className="min-h-25"
                           {...field}
                         />
@@ -198,22 +194,22 @@ export function CreateCategoryDialog({
                 <FormField
                   control={form.control}
                   name="parentId"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Parent Category (optional)</FormLabel>
+                      <FormLabel>Danh mục cha (tùy chọn)</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={busy}
+                        disabled={isPending}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select a parent category" />
+                            <SelectValue placeholder="Chọn danh mục cha" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {categories.map((category) => (
+                          {data?.data.map((category) => (
                             <SelectItem key={category.id} value={category.id}>
                               {category.name}
                             </SelectItem>
@@ -234,15 +230,15 @@ export function CreateCategoryDialog({
                     resetForm();
                     onOpenChange(false);
                   }}
-                  disabled={busy}
+                  disabled={isPending}
                 >
-                  Cancel
+                  Hủy
                 </Button>
-                <Button type="submit" disabled={busy}>
-                  {busy && (
+                <Button type="submit" disabled={isPending}>
+                  {isPending && (
                     <LoaderCircle className="mr-2 size-4 animate-spin" />
                   )}
-                  Create
+                  Tạo
                 </Button>
               </DialogFooter>
             </form>

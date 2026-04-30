@@ -1,9 +1,9 @@
 "use client";
 
-import BannerResponse from "@/lib/schemas/banner/banner-response";
 import Image from "next/image";
 import { ArrowUpDown, SquarePen, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { BannerResponse } from "@/types/banner";
 import { Button } from "@/components/ui/button";
 import { ColumnDef, Row } from "@tanstack/react-table";
 import { DeleteBannerDialog } from "./delete-banner-dialog";
@@ -11,20 +11,27 @@ import { EditBannerDialog } from "./edit-banner-dialog";
 import { getFileUrl } from "@/utils/helpers";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
-import { useToggleActiveBanner } from "@/hooks/banner/use-toggle-active-banner";
-
+import { useToggleActiveBanner } from "@/lib/hooks/use-banner";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+const getGroupLabel = (group: BannerResponse["group"]) => {
+  if (group === "Carousel") return "Băng chuyền";
+  if (group === "HomePopup") return "Popup trang chủ";
+  return group;
+};
+
 function ActiveSwitchCell({ row }: { row: Row<BannerResponse> }) {
-  const { handleToggleActiveBanner } = useToggleActiveBanner();
+  const { mutate: toggleActiveBanner, isPending } = useToggleActiveBanner();
+
   return (
     <Switch
+      disabled={isPending}
       defaultChecked={row.original.isActive}
-      onCheckedChange={() => handleToggleActiveBanner(row.original.id)}
+      onCheckedChange={() => toggleActiveBanner(row.original.id)}
     />
   );
 }
@@ -46,7 +53,7 @@ function ActionsCell({ row }: { row: Row<BannerResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Edit</p>
+          <p>Chỉnh sửa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -61,7 +68,7 @@ function ActionsCell({ row }: { row: Row<BannerResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Delete</p>
+          <p>Xóa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -87,7 +94,7 @@ export const columns: ColumnDef<BannerResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Order
+          Thứ tự
           <Button
             variant="ghost"
             size={"icon"}
@@ -105,7 +112,7 @@ export const columns: ColumnDef<BannerResponse>[] = [
   },
   {
     accessorKey: "media",
-    header: "Image",
+    header: "Hình ảnh",
     enableGlobalFilter: false,
     cell: ({ row }) => {
       const media = row.original.media;
@@ -120,17 +127,17 @@ export const columns: ColumnDef<BannerResponse>[] = [
           />
         </div>
       ) : (
-        <span className="text-muted-foreground text-sm">No image</span>
+        <span className="text-muted-foreground text-sm">Không có ảnh</span>
       );
     },
   },
   {
     accessorKey: "title",
-    header: "Title",
+    header: "Tiêu đề",
   },
   {
     accessorKey: "redirectUrl",
-    header: "Redirect URL",
+    header: "Liên kết chuyển hướng",
     cell: ({ row }) => (
       <span
         className="max-w-48 truncate block"
@@ -142,12 +149,14 @@ export const columns: ColumnDef<BannerResponse>[] = [
   },
   {
     accessorKey: "group",
-    header: "Group",
-    cell: ({ row }) => <Badge variant="outline">{row.original.group}</Badge>,
+    header: "Nhóm",
+    cell: ({ row }) => (
+      <Badge variant="outline">{getGroupLabel(row.original.group)}</Badge>
+    ),
   },
   {
     accessorKey: "isActive",
-    header: "Active",
+    header: "Kích hoạt",
     cell: ({ row }) => <ActiveSwitchCell row={row} />,
   },
   {
@@ -155,7 +164,7 @@ export const columns: ColumnDef<BannerResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Created At
+          Ngày tạo
           <Button
             variant="ghost"
             size={"icon"}
@@ -180,7 +189,7 @@ export const columns: ColumnDef<BannerResponse>[] = [
   },
   {
     id: "actions",
-    header: "Actions",
+    header: "Thao tác",
     cell: ({ row }) => <ActionsCell row={row} />,
   },
 ];

@@ -1,21 +1,20 @@
 "use client";
 
-import CareInstructionResponse from "@/lib/schemas/care-instruction.ts/care-instruction-response";
+import Link from "next/link";
+import { APP_PATHS } from "@/lib/constants/app-paths";
 import { ArrowUpDown, ExternalLink, SquarePen, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CareInstructionResponse } from "@/types/care-instruction";
 import { ColumnDef, Row } from "@tanstack/react-table";
 import { DeleteCareInstructionDialog } from "./delete-care-instruction-dialog";
 import { EditCareInstructionDialog } from "./edit-care-instruction-dialog";
+import { truncateMiddle } from "@/utils/helpers";
 import { useState } from "react";
-
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { truncateMiddle } from "@/utils/helpers";
-import Link from "next/link";
-import { APP_PATHS } from "@/lib/constants/app-paths";
 
 function ActionsCell({ row }: { row: Row<CareInstructionResponse> }) {
   const [editOpen, setEditOpen] = useState(false);
@@ -34,7 +33,7 @@ function ActionsCell({ row }: { row: Row<CareInstructionResponse> }) {
           </Link>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Details</p>
+          <p>Chi tiết</p>
         </TooltipContent>
       </Tooltip>
 
@@ -49,7 +48,7 @@ function ActionsCell({ row }: { row: Row<CareInstructionResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Edit</p>
+          <p>Chỉnh sửa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -64,7 +63,7 @@ function ActionsCell({ row }: { row: Row<CareInstructionResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Delete</p>
+          <p>Xóa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -87,7 +86,7 @@ function ActionsCell({ row }: { row: Row<CareInstructionResponse> }) {
 export const columns: ColumnDef<CareInstructionResponse>[] = [
   {
     accessorKey: "lightRequirement",
-    header: "Light Requirement",
+    header: "Nhu cầu ánh sáng",
     cell: ({ row }) => {
       const value = row.original.lightRequirement;
       return (
@@ -99,7 +98,7 @@ export const columns: ColumnDef<CareInstructionResponse>[] = [
   },
   {
     accessorKey: "wateringFrequency",
-    header: "Watering Frequency",
+    header: "Tần suất tưới nước",
     cell: ({ row }) => {
       const value = row.original.wateringFrequency;
       return (
@@ -111,7 +110,7 @@ export const columns: ColumnDef<CareInstructionResponse>[] = [
   },
   {
     accessorKey: "temperature",
-    header: "Temperature",
+    header: "Nhiệt độ",
     cell: ({ row }) => {
       const value = row.original.temperature;
       return (
@@ -123,7 +122,7 @@ export const columns: ColumnDef<CareInstructionResponse>[] = [
   },
   {
     accessorKey: "soil",
-    header: "Soil",
+    header: "Đất",
     cell: ({ row }) => {
       const value = row.original.soil;
       return (
@@ -135,7 +134,7 @@ export const columns: ColumnDef<CareInstructionResponse>[] = [
   },
   {
     accessorKey: "notes",
-    header: "Notes",
+    header: "Ghi chú",
     cell: ({ row }) => {
       const notes = row.original.notes;
       return (
@@ -149,7 +148,7 @@ export const columns: ColumnDef<CareInstructionResponse>[] = [
     accessorKey: "createdAtUtc",
     header: ({ column }) => (
       <>
-        Created At
+        Ngày tạo
         <Button
           variant="ghost"
           size={"icon"}
@@ -174,7 +173,7 @@ export const columns: ColumnDef<CareInstructionResponse>[] = [
   },
   {
     id: "actions",
-    header: "Actions",
+    header: "Thao tác",
     cell: ({ row }) => <ActionsCell row={row} />,
   },
 ];

@@ -1,8 +1,7 @@
 "use client";
 
-import CategoryResponse from "@/lib/schemas/category/category-response";
-import { useDeleteCategory } from "@/hooks/category/use-delete-category";
-
+import { CategoryResponse } from "@/types/category";
+import { useDeleteCategory } from "@/lib/hooks/use-category";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +15,8 @@ import {
 
 interface DeleteCategoryDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   category: CategoryResponse;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
@@ -27,34 +26,35 @@ export function DeleteCategoryDialog({
   category,
   onSuccess,
 }: DeleteCategoryDialogProps) {
-  const { handleDeleteCategory, isLoading } = useDeleteCategory();
+  const { mutate: deleteCategory, isPending } = useDeleteCategory();
 
-  const onConfirmDelete = async () => {
-    const success = await handleDeleteCategory(category.id);
-    if (success) {
-      onOpenChange(false);
-      onSuccess?.();
-    }
+  const handleDeleteCategory = async () => {
+    deleteCategory(category.id, {
+      onSuccess: () => {
+        onOpenChange(false);
+        onSuccess?.();
+      },
+    });
   };
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete category</AlertDialogTitle>
+          <AlertDialogTitle>Xóa danh mục</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete <strong>{category.name}</strong>?
-            This action cannot be undone.
+            Bạn có chắc muốn xóa <strong>{category.name}</strong>? Hành động này
+            không thể hoàn tác.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirmDelete}
-            disabled={isLoading}
+            onClick={handleDeleteCategory}
+            disabled={isPending}
             className="bg-destructive text-white hover:bg-destructive/90"
           >
-            {isLoading ? "Deleting..." : "Delete"}
+            {isPending ? "Đang xóa..." : "Xóa"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

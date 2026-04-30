@@ -1,51 +1,13 @@
-"use client";
-
-import AuthOptions from "@/components/shared/auth/auth-options";
-import { SignUpForm } from "@/components/shared/auth/sign-up-form";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { APP_PATHS } from "@/lib/constants/app-paths";
-import { cn } from "@/lib/utils";
-import { ChevronLeft, Mail } from "lucide-react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { library } from "@fortawesome/fontawesome-svg-core";
+import SignupOptions from "@/components/feature/auth/signup-options";
+import { APP_PATHS } from "@/lib/constants/app-paths";
 import { faEnvelope } from "@fortawesome/free-solid-svg-icons";
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { Separator } from "@/components/ui/separator";
 
 library.add(faEnvelope);
 
 export default function Page() {
-  const t = useTranslations("Pages.Auth.SignUp");
-
-  const autoHeightDivRef = useRef<HTMLDivElement>(null);
-  const signUpOptionsRef = useRef<HTMLDivElement>(null);
-  const signUpFormRef = useRef<HTMLDivElement>(null);
-
-  const [isSelectedSignUpWithEmail, setIsSelectedSignUpWithEmail] =
-    useState<boolean>(false);
-
-  useEffect(() => {
-    if (
-      !autoHeightDivRef.current &&
-      !signUpOptionsRef.current &&
-      !signUpFormRef.current
-    )
-      return;
-
-    const upDateHeight = () => {
-      if (isSelectedSignUpWithEmail) {
-        autoHeightDivRef.current!.style.minHeight =
-          signUpFormRef.current!.offsetHeight + "px";
-      } else {
-        autoHeightDivRef.current!.style.minHeight =
-          signUpOptionsRef.current!.offsetHeight + "px";
-      }
-    };
-
-    upDateHeight();
-  }, [isSelectedSignUpWithEmail]);
-
   return (
     <div className="w-full relative flex-1">
       {/* Background */}
@@ -56,65 +18,18 @@ export default function Page() {
       <div className="w-full max-w-7xl h-full mx-auto md:p-10 flex lg:flex-row flex-col md:justify-center justify-center items-center gap-10">
         <div className="w-full max-w-lg bg-container md:px-10 py-10 px-4 space-y-8 md:rounded-sm bg-background md:border border-foreground">
           <p className="text-center text-3xl font-bold">
-            {t("CreateAFreeAccount")}
+            Tạo tài khoản miễn phí
           </p>
 
-          <div
-            ref={autoHeightDivRef}
-            className="w-full relative overflow-hidden transition-[height] duration-300 ease-in-out"
-          >
-            {/* Sign Up options */}
-            <div
-              ref={signUpOptionsRef}
-              className={cn(
-                "w-full space-y-4 transition-all duration-300 ease-in-out",
-                isSelectedSignUpWithEmail
-                  ? "opacity-0 -translate-x-full absolute top-0 pointer-events-none"
-                  : "opacity-100 translate-x-0"
-              )}
-            >
-              <AuthOptions />
-
-              <Button
-                variant={"outline"}
-                onClick={() => setIsSelectedSignUpWithEmail(true)}
-                className="w-full border-foreground hover:bg-foreground dark:hover:bg-foreground hover:text-background"
-              >
-                <Mail className="size-6" />
-                {t("ContinueWithEmail")}
-              </Button>
-            </div>
-
-            {/* Sign up form */}
-            <div
-              ref={signUpFormRef}
-              className={cn(
-                "w-full space-y-5 transition-all duration-300 ease-in-out",
-                !isSelectedSignUpWithEmail
-                  ? "opacity-0 translate-x-full absolute top-0 pointer-events-none"
-                  : "opacity-100 translate-x-0"
-              )}
-            >
-              <Button
-                onClick={() => setIsSelectedSignUpWithEmail(false)}
-                size={"icon"}
-                variant={"outline"}
-                className="rounded-full p-6"
-              >
-                <ChevronLeft className="size-6" />
-              </Button>
-
-              <SignUpForm />
-            </div>
-          </div>
+          <SignupOptions />
 
           {/* Already have account */}
           <div className="text-center space-x-1">
             <span className="text-muted-foreground">
-              {t("AlreadyHaveAnGplantAccount")}
+              Bạn đã có tài khoản Gplant?
             </span>
             <Link href={APP_PATHS.SIGN_IN}>
-              <span className="underline">{t("SignInHere")}</span>
+              <span className="underline">Đăng nhập tại đây</span>
             </Link>
           </div>
 
@@ -122,13 +37,13 @@ export default function Page() {
 
           {/* Terms */}
           <div className="text-sm space-x-1">
-            <span>{t("ByContinuing")}</span>
+            <span>Bằng việc tiếp tục, bạn đồng ý với</span>
             <span className="underline">
-              <Link href={""}>{t("PrivacyPolicy")}</Link>
+              <Link href={""}>Chính sách quyền riêng tư</Link>
             </span>
-            <span>{t("And")}</span>
+            <span>và</span>
             <span className="underline">
-              <Link href={""}>{t("TermsOfService")}</Link>
+              <Link href={""}>Điều khoản dịch vụ</Link>
             </span>
           </div>
         </div>

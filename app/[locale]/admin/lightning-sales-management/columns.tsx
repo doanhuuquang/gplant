@@ -1,23 +1,14 @@
 "use client";
 
-import { LightningSaleResponse } from "@/lib/schemas/lightning-sale/lightning-sale-response";
-import {
-  ArrowUpDown,
-  ExternalLink,
-  Eye,
-  SquarePen,
-  Trash2,
-} from "lucide-react";
+import Link from "next/link";
+import { APP_PATHS } from "@/lib/constants/app-paths";
+import { ArrowUpDown, ExternalLink, SquarePen, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ColumnDef, Row } from "@tanstack/react-table";
+import { LightningSaleResponse } from "@/types/lightning-sale";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
-import { useActivateLightningSale } from "@/hooks/lightning-sale/use-activate-lightning-sale";
-import { useDeactivateLightningSale } from "@/hooks/lightning-sale/use-deactivate-lightning-sale";
-import { APP_PATHS } from "@/lib/constants/app-paths";
-import Link from "next/link";
-
 import {
   Tooltip,
   TooltipContent,
@@ -25,6 +16,10 @@ import {
 } from "@/components/ui/tooltip";
 import { EditLightningSaleDialog } from "@/app/[locale]/admin/lightning-sales-management/edit-lightning-sale-dialog";
 import { DeleteLightningSaleDialog } from "@/app/[locale]/admin/lightning-sales-management/delete-lightning-sale-dialog";
+import {
+  useActiveLightningSale,
+  useDeactiveLightningSale,
+} from "@/lib/hooks/use-lightning-sale";
 
 function getSaleStatus(sale: LightningSaleResponse) {
   const now = new Date();
@@ -40,6 +35,13 @@ function getSaleStatus(sale: LightningSaleResponse) {
 function StatusBadge({ sale }: { sale: LightningSaleResponse }) {
   const status = getSaleStatus(sale);
 
+  const statusLabels: Record<string, string> = {
+    ongoing: "Đang diễn ra",
+    upcoming: "Sắp diễn ra",
+    expired: "Đã kết thúc",
+    unknown: "Không xác định",
+  };
+
   const variants: Record<
     string,
     "default" | "secondary" | "destructive" | "outline"
@@ -52,20 +54,20 @@ function StatusBadge({ sale }: { sale: LightningSaleResponse }) {
 
   return (
     <Badge variant={variants[status] ?? "outline"}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+      {statusLabels[status] ?? statusLabels.unknown}
     </Badge>
   );
 }
 
 function ActiveSwitchCell({ row }: { row: Row<LightningSaleResponse> }) {
-  const { handleActivateLightningSale } = useActivateLightningSale();
-  const { handleDeactivateLightningSale } = useDeactivateLightningSale();
+  const { mutate: activateLightningSale } = useActiveLightningSale();
+  const { mutate: deactivateLightningSale } = useDeactiveLightningSale();
 
-  const handleToggle = async () => {
+  const handleToggle = () => {
     if (row.original.isActive) {
-      await handleDeactivateLightningSale(row.original.id);
+      activateLightningSale(row.original.id);
     } else {
-      await handleActivateLightningSale(row.original.id);
+      deactivateLightningSale(row.original.id);
     }
   };
 
@@ -94,7 +96,7 @@ function ActionsCell({ row }: { row: Row<LightningSaleResponse> }) {
           </Link>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Details</p>
+          <p>Chi tiết</p>
         </TooltipContent>
       </Tooltip>
 
@@ -109,7 +111,7 @@ function ActionsCell({ row }: { row: Row<LightningSaleResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Edit</p>
+          <p>Chỉnh sửa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -124,7 +126,7 @@ function ActionsCell({ row }: { row: Row<LightningSaleResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Delete</p>
+          <p>Xóa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -147,12 +149,12 @@ function ActionsCell({ row }: { row: Row<LightningSaleResponse> }) {
 export const columns: ColumnDef<LightningSaleResponse>[] = [
   {
     accessorKey: "name",
-    header: "Name",
+    header: "Tên",
     cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
   },
   {
     accessorKey: "description",
-    header: "Description",
+    header: "Mô tả",
     cell: ({ row }) => (
       <span
         className="max-w-48 truncate block"
@@ -164,7 +166,7 @@ export const columns: ColumnDef<LightningSaleResponse>[] = [
   },
   {
     id: "status",
-    header: "Status",
+    header: "Trạng thái",
     accessorFn: (row) => {
       const now = new Date();
       const start = new Date(row.startDateUtc);
@@ -184,7 +186,7 @@ export const columns: ColumnDef<LightningSaleResponse>[] = [
   },
   {
     accessorKey: "totalItems",
-    header: "Items",
+    header: "Sản phẩm",
     enableGlobalFilter: false,
     cell: ({ row }) => (
       <span>
@@ -197,7 +199,7 @@ export const columns: ColumnDef<LightningSaleResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Start Date
+          Ngày bắt đầu
           <Button
             variant="ghost"
             size={"icon"}
@@ -225,7 +227,7 @@ export const columns: ColumnDef<LightningSaleResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          End Date
+          Ngày kết thúc
           <Button
             variant="ghost"
             size={"icon"}
@@ -250,7 +252,7 @@ export const columns: ColumnDef<LightningSaleResponse>[] = [
   },
   {
     accessorKey: "isActive",
-    header: "Active",
+    header: "Kích hoạt",
     cell: ({ row }) => <ActiveSwitchCell row={row} />,
   },
   {
@@ -258,7 +260,7 @@ export const columns: ColumnDef<LightningSaleResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Created At
+          Ngày tạo
           <Button
             variant="ghost"
             size={"icon"}
@@ -283,7 +285,7 @@ export const columns: ColumnDef<LightningSaleResponse>[] = [
   },
   {
     id: "actions",
-    header: "Actions",
+    header: "Thao tác",
     cell: ({ row }) => <ActionsCell row={row} />,
   },
 ];

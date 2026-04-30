@@ -1,15 +1,14 @@
 "use client";
 
-import InventoryResponse from "@/lib/schemas/inventory/inventory-response";
+import { AdjustInventoryDialog } from "./adjust-inventory-dialog";
 import { ArrowUpDown, PackagePlus, SquarePen, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ColumnDef, Row } from "@tanstack/react-table";
 import { DeleteInventoryDialog } from "./delete-inventory-dialog";
 import { EditInventoryDialog } from "./edit-inventory-dialog";
-import { AdjustInventoryDialog } from "./adjust-inventory-dialog";
+import { InventoryResponse } from "@/types/inventory";
 import { useState } from "react";
-
 import {
   Tooltip,
   TooltipContent,
@@ -18,7 +17,7 @@ import {
 
 function StockStatusBadge({ inventory }: { inventory: InventoryResponse }) {
   if (inventory.isOutOfStock) {
-    return <Badge variant="destructive">Out of Stock</Badge>;
+    return <Badge variant="destructive">Hết hàng</Badge>;
   }
   if (inventory.isLowStock) {
     return (
@@ -26,11 +25,11 @@ function StockStatusBadge({ inventory }: { inventory: InventoryResponse }) {
         variant="secondary"
         className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
       >
-        Low Stock
+        Sắp hết hàng
       </Badge>
     );
   }
-  return <Badge variant="default">In Stock</Badge>;
+  return <Badge variant="default">Còn hàng</Badge>;
 }
 
 function ActionsCell({ row }: { row: Row<InventoryResponse> }) {
@@ -51,7 +50,7 @@ function ActionsCell({ row }: { row: Row<InventoryResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Adjust Stock</p>
+          <p>Điều chỉnh tồn kho</p>
         </TooltipContent>
       </Tooltip>
 
@@ -66,7 +65,7 @@ function ActionsCell({ row }: { row: Row<InventoryResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Edit</p>
+          <p>Chỉnh sửa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -81,19 +80,17 @@ function ActionsCell({ row }: { row: Row<InventoryResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Delete</p>
+          <p>Xóa</p>
         </TooltipContent>
       </Tooltip>
 
       <AdjustInventoryDialog
-        key={`adjust-${row.original.id}`}
         open={adjustOpen}
         onOpenChange={setAdjustOpen}
         inventory={row.original}
       />
 
       <EditInventoryDialog
-        key={`edit-${row.original.id}`}
         open={editOpen}
         onOpenChange={setEditOpen}
         inventory={row.original}
@@ -111,7 +108,7 @@ function ActionsCell({ row }: { row: Row<InventoryResponse> }) {
 export const columns: ColumnDef<InventoryResponse>[] = [
   {
     id: "variant",
-    header: "Variant (SKU)",
+    header: "Biến thể (SKU)",
     accessorFn: (row) => row.plantVariant?.sku ?? "—",
     cell: ({ row }) => (
       <span className="font-medium">
@@ -124,7 +121,7 @@ export const columns: ColumnDef<InventoryResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Available
+          Khả dụng
           <Button
             variant="ghost"
             size={"icon"}
@@ -142,7 +139,7 @@ export const columns: ColumnDef<InventoryResponse>[] = [
   },
   {
     accessorKey: "quantityReserved",
-    header: "Reserved",
+    header: "Đã giữ",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
         {row.original.quantityReserved}
@@ -151,14 +148,14 @@ export const columns: ColumnDef<InventoryResponse>[] = [
   },
   {
     accessorKey: "totalQuantity",
-    header: "Total",
+    header: "Tổng",
     cell: ({ row }) => (
       <span className="font-medium">{row.original.totalQuantity}</span>
     ),
   },
   {
     id: "status",
-    header: "Status",
+    header: "Trạng thái",
     cell: ({ row }) => <StockStatusBadge inventory={row.original} />,
   },
   {
@@ -166,7 +163,7 @@ export const columns: ColumnDef<InventoryResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Last Updated
+          Cập nhật gần nhất
           <Button
             variant="ghost"
             size={"icon"}
@@ -191,7 +188,7 @@ export const columns: ColumnDef<InventoryResponse>[] = [
   },
   {
     id: "actions",
-    header: "Actions",
+    header: "Thao tác",
     cell: ({ row }) => <ActionsCell row={row} />,
   },
 ];

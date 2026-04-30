@@ -1,11 +1,18 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
+import {
+  CareInstructionResponse,
+  UpdateCareInstructionRequest,
+} from "@/types/care-instruction";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { UpdateCareInstructionRequestValidation } from "@/validations/care-instruction";
+import { useForm } from "react-hook-form";
+import { useUpdateCareInstruction } from "@/lib/hooks/use-care-instruction";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -22,25 +29,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useUpdateCareInstruction } from "@/hooks/care-instruction/use-update-care-instruction";
-import CareInstructionResponse from "@/lib/schemas/care-instruction.ts/care-instruction-response";
 
-const editCareInstructionSchema = z.object({
-  lightRequirement: z.string().min(1, "Light requirement is required"),
-  wateringFrequency: z.string().min(1, "Watering frequency is required"),
-  temperature: z.string().min(1, "Temperature is required"),
-  soil: z.string().min(1, "Soil information is required"),
-  notes: z.string().min(1, "Notes are required"),
-});
-
-type EditCareInstructionFormValues = z.infer<typeof editCareInstructionSchema>;
+type EditCareInstructionFormValues = z.infer<
+  typeof UpdateCareInstructionRequestValidation
+>;
 
 interface EditCareInstructionDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   careInstruction: CareInstructionResponse | null;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function EditCareInstructionDialog({
@@ -48,10 +45,11 @@ export function EditCareInstructionDialog({
   onOpenChange,
   careInstruction,
 }: EditCareInstructionDialogProps) {
-  const { handleUpdateCareInstruction, isLoading } = useUpdateCareInstruction();
+  const { mutate: updateCareInstruction, isPending } =
+    useUpdateCareInstruction();
 
   const form = useForm<EditCareInstructionFormValues>({
-    resolver: zodResolver(editCareInstructionSchema),
+    resolver: zodResolver(UpdateCareInstructionRequestValidation),
     defaultValues: {
       lightRequirement: careInstruction?.lightRequirement ?? "",
       wateringFrequency: careInstruction?.wateringFrequency ?? "",
@@ -64,28 +62,32 @@ export function EditCareInstructionDialog({
   async function onSubmit(values: EditCareInstructionFormValues) {
     if (!careInstruction) return;
 
-    const success = await handleUpdateCareInstruction(careInstruction.id, {
+    const request: UpdateCareInstructionRequest = {
       lightRequirement: values.lightRequirement,
       wateringFrequency: values.wateringFrequency,
       temperature: values.temperature,
       soil: values.soil,
       notes: values.notes,
-    });
+    };
 
-    if (success) {
-      onOpenChange(false);
-    }
+    updateCareInstruction(
+      {
+        id: careInstruction.id,
+        data: request,
+      },
+      {
+        onSuccess: () => onOpenChange(false),
+      },
+    );
   }
-
-  const busy = isLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-125 max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Edit Care Instruction</DialogTitle>
+          <DialogTitle>Chỉnh sửa hướng dẫn chăm sóc</DialogTitle>
           <DialogDescription>
-            Update the care instruction details below.
+            Cập nhật thông tin hướng dẫn chăm sóc bên dưới.
           </DialogDescription>
         </DialogHeader>
 
@@ -98,13 +100,13 @@ export function EditCareInstructionDialog({
               <FormField
                 control={form.control}
                 name="lightRequirement"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Light Requirement</FormLabel>
+                    <FormLabel>Nhu cầu ánh sáng</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. Full sun, Partial shade"
+                        placeholder="Ví dụ: Nắng đầy đủ, Bóng râm một phần"
                         {...field}
                       />
                     </FormControl>
@@ -116,13 +118,13 @@ export function EditCareInstructionDialog({
               <FormField
                 control={form.control}
                 name="wateringFrequency"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Watering Frequency</FormLabel>
+                    <FormLabel>Tần suất tưới nước</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. Once a week, Twice a week"
+                        placeholder="Ví dụ: 1 lần/tuần, 2 lần/tuần"
                         {...field}
                       />
                     </FormControl>
@@ -134,12 +136,12 @@ export function EditCareInstructionDialog({
               <FormField
                 control={form.control}
                 name="temperature"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Temperature</FormLabel>
+                    <FormLabel>Nhiệt độ</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. 18-24°C" {...field} />
+                      <Input placeholder="Ví dụ: 18-24°C" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -149,13 +151,13 @@ export function EditCareInstructionDialog({
               <FormField
                 control={form.control}
                 name="soil"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Soil</FormLabel>
+                    <FormLabel>Đất</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. Well-drained, Sandy loam"
+                        placeholder="Ví dụ: Thoát nước tốt, đất cát pha"
                         {...field}
                       />
                     </FormControl>
@@ -167,13 +169,13 @@ export function EditCareInstructionDialog({
               <FormField
                 control={form.control}
                 name="notes"
-                disabled={busy}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>Ghi chú</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Additional care notes"
+                        placeholder="Ghi chú chăm sóc thêm"
                         className="min-h-25"
                         {...field}
                       />
@@ -189,13 +191,18 @@ export function EditCareInstructionDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={busy}
+                disabled={isPending}
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit" disabled={busy}>
-                {busy && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-                Save
+              <Button
+                type="submit"
+                disabled={isPending || !form.formState.isValid}
+              >
+                {isPending && (
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
+                )}
+                Lưu
               </Button>
             </DialogFooter>
           </form>

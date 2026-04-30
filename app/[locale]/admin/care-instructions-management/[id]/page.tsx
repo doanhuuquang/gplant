@@ -1,20 +1,20 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { useAdminHeader } from "@/hooks/use-admin-header";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { SquarePen, Trash2 } from "lucide-react";
-import { EditCareInstructionDialog } from "../edit-care-instruction-dialog";
-import { DeleteCareInstructionDialog } from "../delete-care-instruction-dialog";
 import { APP_PATHS } from "@/lib/constants/app-paths";
-import { useGetCareInstructionById } from "@/hooks/care-instruction/use-get-care-instruction-by-id";
+import { Button } from "@/components/ui/button";
+import { DeleteCareInstructionDialog } from "../delete-care-instruction-dialog";
+import { EditCareInstructionDialog } from "../edit-care-instruction-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SquarePen, Trash2 } from "lucide-react";
+import { useAdminHeader } from "@/lib/hooks/use-admin-header";
+import { useCareInstructionById } from "@/lib/hooks/use-care-instruction";
+import { useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 
 export default function CareInstructionDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { data, loading, error } = useGetCareInstructionById(id as string);
+  const { data, isLoading, error } = useCareInstructionById(id as string);
   const [editOpen, setEditOpen] = useState<boolean>(false);
   const [deleteOpen, setDeleteOpen] = useState<boolean>(false);
 
@@ -42,12 +42,12 @@ export default function CareInstructionDetailPage() {
             <EditCareInstructionDialog
               open={editOpen}
               onOpenChange={setEditOpen}
-              careInstruction={data}
+              careInstruction={data.data}
             />
             <DeleteCareInstructionDialog
               open={deleteOpen}
               onOpenChange={setDeleteOpen}
-              careInstruction={data}
+              careInstruction={data.data}
               onSuccess={() =>
                 router.push(APP_PATHS.CARE_INSTRUCTIONS_MANAGEMENT)
               }
@@ -60,7 +60,7 @@ export default function CareInstructionDetailPage() {
   );
   useAdminHeader(headerActions);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex flex-1 flex-col gap-2">
         <div className="grid gap-6 lg:grid-cols-[1fr_350px]">
@@ -77,7 +77,7 @@ export default function CareInstructionDetailPage() {
   if (error) {
     return (
       <div className="rounded-sm border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
-        {error}
+        {error.message}
       </div>
     );
   }
@@ -91,31 +91,31 @@ export default function CareInstructionDetailPage() {
         <div className="flex flex-col gap-2">
           <div className="rounded-sm border bg-card p-4">
             <h2 className="mb-5 text-sm font-semibold">
-              Care Instruction Details
+              Chi tiết hướng dẫn chăm sóc
             </h2>
             <div className="space-y-4">
               <div className="grid grid-cols-[120px_1fr] items-center gap-x-4 text-sm">
-                <span className="text-muted-foreground">Light Requirement</span>
-                <span>{data.lightRequirement}</span>
+                <span className="text-muted-foreground">Nhu cầu ánh sáng</span>
+                <span>{data.data.lightRequirement}</span>
               </div>
               <div className="grid grid-cols-[120px_1fr] items-center gap-x-4 text-sm">
                 <span className="text-muted-foreground">
-                  Watering Frequency
+                  Tần suất tưới nước
                 </span>
-                <span>{data.wateringFrequency}</span>
+                <span>{data.data.wateringFrequency}</span>
               </div>
               <div className="grid grid-cols-[120px_1fr] items-center gap-x-4 text-sm">
-                <span className="text-muted-foreground">Temperature</span>
-                <span>{data.temperature}</span>
+                <span className="text-muted-foreground">Nhiệt độ</span>
+                <span>{data.data.temperature}</span>
               </div>
               <div className="grid grid-cols-[120px_1fr] items-center gap-x-4 text-sm">
-                <span className="text-muted-foreground">Soil</span>
-                <span>{data.soil}</span>
+                <span className="text-muted-foreground">Đất</span>
+                <span>{data.data.soil}</span>
               </div>
               <div className="grid grid-cols-[120px_1fr] items-center gap-x-4 text-sm">
-                <span className="text-muted-foreground">Created At</span>
+                <span className="text-muted-foreground">Ngày tạo</span>
                 <span>
-                  {new Date(data.createdAtUtc).toLocaleString("vi-VN", {
+                  {new Date(data.data.createdAtUtc).toLocaleString("vi-VN", {
                     hour12: false,
                   })}
                 </span>
@@ -127,12 +127,14 @@ export default function CareInstructionDetailPage() {
         <div className="flex flex-col gap-6 lg:sticky lg:top-4 lg:self-start">
           {/* Notes Card */}
           <div className="rounded-sm border bg-card p-4">
-            <h2 className="mb-2 text-sm font-semibold">Notes</h2>
+            <h2 className="mb-2 text-sm font-semibold">Ghi chú</h2>
             <div
               className="text-sm whitespace-pre-line wrap-break-word max-w-full"
-              title={data.notes}
+              title={data.data.notes}
             >
-              {data.notes || <span className="text-muted-foreground">—</span>}
+              {data.data.notes || (
+                <span className="text-muted-foreground">—</span>
+              )}
             </div>
           </div>
         </div>

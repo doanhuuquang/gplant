@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { ImagePlus, LoaderCircle, X } from "lucide-react";
 import Image from "next/image";
-import { getFileUrl } from "@/utils/helpers";
-
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { getFileUrl } from "@/utils/helpers";
+import { ImagePlus, LoaderCircle, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MediaPickerDialog } from "@/components/feature/media/media-picker-dialog";
+import { MediaResponse } from "@/types/media";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { UpdatePlantRequestValidation } from "@/validations/plant";
+import { useActiveCategories } from "@/lib/hooks/use-category";
+import { useCareInstructions } from "@/lib/hooks/use-care-instruction";
+import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -25,8 +33,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -34,37 +40,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useUpdatePlant } from "@/hooks/plant/use-update-plant";
-import { useGetActiveCategories } from "@/hooks/category/use-get-active-categories";
-import { useGetCareInstructions } from "@/hooks/care-instruction/use-get-care-instructions";
-import { MediaPickerDialog } from "@/components/shared/media-picker-dialog";
-import MediaResponse from "@/lib/schemas/media/media-response";
-import PlantResponse from "@/lib/schemas/plant/plant-response";
 import {
-  createPlantImageApi,
-  deletePlantImageApi,
-  setPrimaryPlantImageApi,
-} from "@/services/plant-image-service";
-import { usePlantStore } from "@/stores/plant-store";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+  CreatePlantImageRequest,
+  PlantResponse,
+  UpdatePlantRequest,
+} from "@/types/plant";
+import {
+  useCreatePlantImage,
+  useDeletePlantImage,
+  useSetPrimaryPlantImage,
+  useUpdatePlant,
+} from "@/lib/hooks/use-plant";
 
-const editPlantSchema = z.object({
-  name: z.string().min(1, "Plant name is required"),
-  shortDescription: z.string().min(1, "Short description is required"),
-  description: z.string().min(1, "Description is required"),
-  categoryId: z.string().min(1, "Category is required"),
-  careInstructionId: z.string().min(1, "Care instruction is required"),
-  isActive: z.boolean(),
-});
-
-type EditPlantFormValues = z.infer<typeof editPlantSchema>;
+type EditPlantFormValues = z.infer<typeof UpdatePlantRequestValidation>;
 
 interface EditPlantDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   plant: PlantResponse | null;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
@@ -74,12 +67,6 @@ export function EditPlantDialog({
   plant,
   onSuccess,
 }: EditPlantDialogProps) {
-  const { handleUpdatePlant, isLoading } = useUpdatePlant();
-  const { activeCategories } = useGetActiveCategories();
-  const { careInstructions } = useGetCareInstructions();
-  const { fetchPlants } = usePlantStore();
-
-  // Image state
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [imageState, setImageState] = useState<{
     primaryKey: string;
@@ -94,12 +81,19 @@ export function EditPlantDialog({
     };
   });
 
+  const { mutate: updatePlant, isPending: isUpdatingPlant } = useUpdatePlant();
+  const { mutate: deletePlantImage } = useDeletePlantImage();
+  const { mutate: createPlantImage } = useCreatePlantImage();
+  const { mutate: setPrimaryPlantImage } = useSetPrimaryPlantImage();
+  const { data: activeCategoriesResponse } = useActiveCategories();
+  const { data: careInstructionsResponse } = useCareInstructions();
+
   const existingImages = (plant?.images ?? []).filter(
     (img) => !imageState.removedImageIds.includes(img.id),
   );
 
   const form = useForm<EditPlantFormValues>({
-    resolver: zodResolver(editPlantSchema),
+    resolver: zodResolver(UpdatePlantRequestValidation),
     defaultValues: {
       name: plant?.name ?? "",
       shortDescription: plant?.shortDescription ?? "",
@@ -109,26 +103,6 @@ export function EditPlantDialog({
       isActive: plant?.isActive ?? true,
     },
   });
-
-  // Sync form + image state when plant data loads or changes
-  const [prevPlant, setPrevPlant] = useState(plant);
-  if (plant && plant !== prevPlant) {
-    setPrevPlant(plant);
-    form.reset({
-      name: plant.name ?? "",
-      shortDescription: plant.shortDescription ?? "",
-      description: plant.description ?? "",
-      categoryId: plant.category?.id ?? "",
-      careInstructionId: plant.careInstruction?.id ?? "",
-      isActive: plant.isActive ?? true,
-    });
-    const primary = plant.images?.find((i) => i.isPrimary);
-    setImageState({
-      primaryKey: primary ? `existing-${primary.id}` : "",
-      removedImageIds: [],
-      newImages: [],
-    });
-  }
 
   const handleMediaSelected = (media: MediaResponse) => {
     if (existingImages.some((img) => img.media?.id === media.id)) return;
@@ -194,63 +168,62 @@ export function EditPlantDialog({
   async function onSubmit(values: EditPlantFormValues) {
     if (!plant) return;
 
-    const success = await handleUpdatePlant(plant.id, {
+    const request: UpdatePlantRequest = {
       name: values.name,
       shortDescription: values.shortDescription,
       description: values.description,
       categoryId: values.categoryId,
       careInstructionId: values.careInstructionId,
       isActive: values.isActive,
-    });
+    };
 
-    if (success) {
-      const hasImageChanges =
-        imageState.removedImageIds.length > 0 ||
-        imageState.newImages.length > 0 ||
-        imageState.primaryKey !==
-          `existing-${plant.images?.find((i) => i.isPrimary)?.id ?? ""}`;
+    updatePlant(
+      { id: plant.id, request: request },
+      {
+        onSuccess: () => {
+          onSuccess?.();
+          onOpenChange(false);
 
-      if (hasImageChanges) {
-        try {
-          for (const id of imageState.removedImageIds) {
-            await deletePlantImageApi(id);
-          }
-          for (const img of imageState.newImages) {
-            await createPlantImageApi({
-              plantId: plant.id,
-              mediaId: img.media.id,
-              isPrimary: imageState.primaryKey === `new-${img.media.id}`,
-            });
-          }
-          if (imageState.primaryKey.startsWith("existing-")) {
-            const targetId = imageState.primaryKey.replace("existing-", "");
-            const originalPrimary = plant.images?.find((i) => i.isPrimary);
-            if (originalPrimary?.id !== targetId) {
-              await setPrimaryPlantImageApi(targetId);
+          const hasImageChanges =
+            imageState.removedImageIds.length > 0 ||
+            imageState.newImages.length > 0 ||
+            imageState.primaryKey !==
+              `existing-${plant.images?.find((i) => i.isPrimary)?.id ?? ""}`;
+
+          if (hasImageChanges) {
+            for (const id of imageState.removedImageIds) {
+              deletePlantImage(id);
+            }
+
+            for (const img of imageState.newImages) {
+              createPlantImage({
+                plantId: plant.id,
+                mediaId: img.media.id,
+                isPrimary: imageState.primaryKey === `new-${img.media.id}`,
+              } as CreatePlantImageRequest);
+            }
+
+            if (imageState.primaryKey.startsWith("existing-")) {
+              const targetId = imageState.primaryKey.replace("existing-", "");
+              const originalPrimary = plant.images?.find((i) => i.isPrimary);
+              if (originalPrimary?.id !== targetId) {
+                setPrimaryPlantImage(targetId);
+              }
             }
           }
-        } catch {
-          toast.error("Image error", {
-            description: "Some image changes could not be saved.",
-          });
-        }
-        await fetchPlants();
-      }
-      onSuccess?.();
-      onOpenChange(false);
-    }
+        },
+      },
+    );
   }
-
-  const busy = isLoading;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-150 max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Edit Plant</DialogTitle>
+            <DialogTitle>Chỉnh sửa cây</DialogTitle>
             <DialogDescription>
-              Update the plant details below.
+              Cập nhật thông tin cây bên dưới.
             </DialogDescription>
           </DialogHeader>
 
@@ -263,12 +236,12 @@ export function EditPlantDialog({
                 <FormField
                   control={form.control}
                   name="name"
-                  disabled={busy}
+                  disabled={isUpdatingPlant}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel>Tên</FormLabel>
                       <FormControl>
-                        <Input placeholder="Plant name" {...field} />
+                        <Input placeholder="Tên cây" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -278,12 +251,12 @@ export function EditPlantDialog({
                 <FormField
                   control={form.control}
                   name="shortDescription"
-                  disabled={busy}
+                  disabled={isUpdatingPlant}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Short Description</FormLabel>
+                      <FormLabel>Mô tả ngắn</FormLabel>
                       <FormControl>
-                        <Input placeholder="Brief description" {...field} />
+                        <Input placeholder="Mô tả ngắn" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -293,13 +266,13 @@ export function EditPlantDialog({
                 <FormField
                   control={form.control}
                   name="description"
-                  disabled={busy}
+                  disabled={isUpdatingPlant}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Mô tả</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Full plant description"
+                          placeholder="Mô tả chi tiết cây"
                           className="min-h-25"
                           {...field}
                         />
@@ -312,22 +285,22 @@ export function EditPlantDialog({
                 <FormField
                   control={form.control}
                   name="categoryId"
-                  disabled={busy}
+                  disabled={isUpdatingPlant}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>Danh mục</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={busy}
+                        disabled={isUpdatingPlant}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full h-12! shadow-none rounded-sm">
-                            <SelectValue placeholder="Select a category" />
+                            <SelectValue placeholder="Chọn danh mục" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {activeCategories.map((category) => (
+                          {activeCategoriesResponse?.data.map((category) => (
                             <SelectItem key={category.id} value={category.id}>
                               {category.name}
                             </SelectItem>
@@ -342,22 +315,22 @@ export function EditPlantDialog({
                 <FormField
                   control={form.control}
                   name="careInstructionId"
-                  disabled={busy}
+                  disabled={isUpdatingPlant}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Care Instruction</FormLabel>
+                      <FormLabel>Hướng dẫn chăm sóc</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={busy}
+                        disabled={isUpdatingPlant}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full h-12! shadow-none rounded-sm">
-                            <SelectValue placeholder="Select a care instruction" />
+                            <SelectValue placeholder="Chọn hướng dẫn chăm sóc" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {careInstructions.map((ci) => (
+                          {careInstructionsResponse?.data.map((ci) => (
                             <SelectItem key={ci.id} value={ci.id}>
                               {ci.lightRequirement} / {ci.wateringFrequency}
                             </SelectItem>
@@ -373,23 +346,23 @@ export function EditPlantDialog({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <FormLabel>Images</FormLabel>
+                      <FormLabel>Hình ảnh</FormLabel>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {existingImages.length + imageState.newImages.length ===
                         0
-                          ? "Add images for this plant"
-                          : `${existingImages.length + imageState.newImages.length} image${existingImages.length + imageState.newImages.length > 1 ? "s" : ""}`}
+                          ? "Thêm hình ảnh cho cây này"
+                          : `Đã có ${existingImages.length + imageState.newImages.length} ảnh`}
                       </p>
                     </div>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={busy}
+                      disabled={isUpdatingPlant}
                       onClick={() => setMediaPickerOpen(true)}
                     >
                       <ImagePlus className="size-4 mr-1.5" />
-                      Add
+                      Thêm
                     </Button>
                   </div>
 
@@ -397,12 +370,12 @@ export function EditPlantDialog({
                   imageState.newImages.length === 0 ? (
                     <button
                       type="button"
-                      disabled={busy}
+                      disabled={isUpdatingPlant}
                       onClick={() => setMediaPickerOpen(true)}
                       className="w-full rounded-sm border-2 border-dashed py-8 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                     >
                       <ImagePlus className="size-8 opacity-60" />
-                      <span className="text-sm">Click to browse media</span>
+                      <span className="text-sm">Nhấn để chọn media</span>
                     </button>
                   ) : (
                     <div className="rounded-sm border bg-muted/30 p-2">
@@ -438,7 +411,7 @@ export function EditPlantDialog({
                               {isPrimary && (
                                 <div className="absolute inset-x-0 bottom-0 bg-primary/90 px-2 py-0.5 text-center">
                                   <span className="text-[10px] font-semibold text-primary-foreground uppercase tracking-wider">
-                                    Primary
+                                    Chính
                                   </span>
                                 </div>
                               )}
@@ -484,7 +457,7 @@ export function EditPlantDialog({
                               {isPrimary && (
                                 <div className="absolute inset-x-0 bottom-0 bg-primary/90 px-2 py-0.5 text-center">
                                   <span className="text-[10px] font-semibold text-primary-foreground uppercase tracking-wider">
-                                    Primary
+                                    Chính
                                   </span>
                                 </div>
                               )}
@@ -503,7 +476,7 @@ export function EditPlantDialog({
                         })}
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                        Click an image to set as primary
+                        Nhấn vào ảnh để đặt làm ảnh chính
                       </p>
                     </div>
                   )}
@@ -514,12 +487,14 @@ export function EditPlantDialog({
                   name="isActive"
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-sm border p-3">
-                      <FormLabel className="cursor-pointer">Active</FormLabel>
+                      <FormLabel className="cursor-pointer">
+                        Kích hoạt
+                      </FormLabel>
                       <FormControl>
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
-                          disabled={busy}
+                          disabled={isUpdatingPlant}
                         />
                       </FormControl>
                     </FormItem>
@@ -532,15 +507,15 @@ export function EditPlantDialog({
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
-                  disabled={busy}
+                  disabled={isUpdatingPlant}
                 >
-                  Cancel
+                  Hủy
                 </Button>
-                <Button type="submit" disabled={busy}>
-                  {busy && (
+                <Button type="submit" disabled={isUpdatingPlant}>
+                  {isUpdatingPlant && (
                     <LoaderCircle className="mr-2 size-4 animate-spin" />
                   )}
-                  Save Changes
+                  Lưu thay đổi
                 </Button>
               </DialogFooter>
             </form>

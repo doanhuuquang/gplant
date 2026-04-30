@@ -2,12 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { CirclePlus, Search } from "lucide-react";
-import { DataTable } from "@/components/ui/data-table";
-import { useGetLightningSales } from "@/hooks/lightning-sale/use-get-lightning-sales";
-import { useMemo, useState } from "react";
-import { useAdminHeader } from "@/hooks/use-admin-header";
 import { ColumnFiltersState } from "@tanstack/react-table";
-
+import { DataTable } from "@/components/ui/data-table";
+import { useAdminHeader } from "@/lib/hooks/use-admin-header";
+import { useLightningSales } from "@/lib/hooks/use-lightning-sale";
+import { useMemo, useState } from "react";
 import {
   InputGroup,
   InputGroupAddon,
@@ -26,7 +25,7 @@ import { CreateLightningSaleDialog } from "@/app/[locale]/admin/lightning-sales-
 const ALL_STATUS = "all";
 
 export default function LightningSalesManagementPage() {
-  const { lightningSales } = useGetLightningSales();
+  const { data, isLoading } = useLightningSales();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUS);
@@ -44,7 +43,7 @@ export default function LightningSalesManagementPage() {
       <>
         <InputGroup className="w-full max-w-xl border-transparent bg-muted dark:bg-background">
           <InputGroupInput
-            placeholder="Search..."
+            placeholder="Tìm kiếm..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -55,15 +54,15 @@ export default function LightningSalesManagementPage() {
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="h-12! rounded-sm shadow-none">
-            <SelectValue placeholder="All Status" />
+            <SelectValue placeholder="Tất cả trạng thái" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_STATUS}>All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="upcoming">Upcoming</SelectItem>
-            <SelectItem value="ongoing">Ongoing</SelectItem>
-            <SelectItem value="expired">Expired</SelectItem>
+            <SelectItem value={ALL_STATUS}>Tất cả trạng thái</SelectItem>
+            <SelectItem value="active">Đang bật</SelectItem>
+            <SelectItem value="inactive">Đang tắt</SelectItem>
+            <SelectItem value="upcoming">Sắp diễn ra</SelectItem>
+            <SelectItem value="ongoing">Đang diễn ra</SelectItem>
+            <SelectItem value="expired">Đã kết thúc</SelectItem>
           </SelectContent>
         </Select>
 
@@ -86,7 +85,8 @@ export default function LightningSalesManagementPage() {
     <>
       <DataTable
         columns={columns}
-        data={lightningSales}
+        data={data?.data || []}
+        isLoading={isLoading}
         globalFilter={searchQuery}
         columnFilters={columnFilters}
       />

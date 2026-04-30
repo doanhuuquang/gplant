@@ -1,11 +1,14 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { CreatePlantVariantRequestValidation } from "@/validations/plant";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { useCreatePlantVariant } from "@/lib/hooks/use-plant";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -22,23 +25,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { useCreatePlantVariant } from "@/hooks/plant/use-create-plant-variant";
 
-const createVariantSchema = z.object({
-  sku: z.string().min(1, "SKU is required"),
-  price: z.number().positive("Price must be greater than 0"),
-  size: z.number().positive("Size must be greater than 0"),
-  isActive: z.boolean(),
-});
-
-type CreateVariantFormValues = z.infer<typeof createVariantSchema>;
+type CreateVariantFormValues = z.infer<
+  typeof CreatePlantVariantRequestValidation
+>;
 
 interface CreateVariantDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   plantId: string;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
@@ -48,11 +43,12 @@ export function CreateVariantDialog({
   plantId,
   onSuccess,
 }: CreateVariantDialogProps) {
-  const { handleCreateVariant, isLoading } = useCreatePlantVariant();
+  const { mutate: createPlantVariant, isPending } = useCreatePlantVariant();
 
   const form = useForm<CreateVariantFormValues>({
-    resolver: zodResolver(createVariantSchema),
+    resolver: zodResolver(CreatePlantVariantRequestValidation),
     defaultValues: {
+      plantId: plantId,
       sku: "",
       price: 0,
       size: 0,
@@ -61,29 +57,29 @@ export function CreateVariantDialog({
   });
 
   async function onSubmit(values: CreateVariantFormValues) {
-    const success = await handleCreateVariant({
-      plantId,
+    const request = {
+      plantId: values.plantId,
       sku: values.sku,
       price: values.price,
       size: values.size,
       isActive: values.isActive,
-    });
+    };
 
-    if (success) {
-      form.reset();
-      onSuccess?.();
-      onOpenChange(false);
-    }
+    createPlantVariant(request, {
+      onSuccess: () => {
+        form.reset();
+        onSuccess?.();
+        onOpenChange(false);
+      },
+    });
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Variant</DialogTitle>
-          <DialogDescription>
-            Add a new variant for this plant.
-          </DialogDescription>
+          <DialogTitle>Tạo biến thể</DialogTitle>
+          <DialogDescription>Thêm biến thể mới cho cây này.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -91,12 +87,12 @@ export function CreateVariantDialog({
             <FormField
               control={form.control}
               name="sku"
-              disabled={isLoading}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>SKU</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. PLT-001-S" {...field} />
+                    <Input placeholder="Ví dụ: PLT-001-S" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -107,10 +103,10 @@ export function CreateVariantDialog({
               <FormField
                 control={form.control}
                 name="price"
-                disabled={isLoading}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Price (VND)</FormLabel>
+                    <FormLabel>Giá (VND)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -127,10 +123,10 @@ export function CreateVariantDialog({
               <FormField
                 control={form.control}
                 name="size"
-                disabled={isLoading}
+                disabled={isPending}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Size (cm)</FormLabel>
+                    <FormLabel>Kích thước (cm)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -150,12 +146,12 @@ export function CreateVariantDialog({
               name="isActive"
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-sm border p-3">
-                  <FormLabel className="cursor-pointer">Active</FormLabel>
+                  <FormLabel className="cursor-pointer">Kích hoạt</FormLabel>
                   <FormControl>
                     <Switch
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      disabled={isLoading}
+                      disabled={isPending}
                     />
                   </FormControl>
                 </FormItem>
@@ -167,15 +163,15 @@ export function CreateVariantDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isLoading}
+                disabled={isPending}
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && (
+              <Button type="submit" disabled={isPending}>
+                {isPending && (
                   <LoaderCircle className="mr-2 size-4 animate-spin" />
                 )}
-                Create
+                Tạo
               </Button>
             </DialogFooter>
           </form>

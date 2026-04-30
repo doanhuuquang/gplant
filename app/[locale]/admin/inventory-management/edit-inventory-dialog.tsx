@@ -1,11 +1,14 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { InventoryResponse, UpdateInventoryRequest } from "@/types/inventory";
+import { LoaderCircle } from "lucide-react";
+import { UpdateInventoryRequestValidation } from "@/validations/inventory";
+import { useForm } from "react-hook-form";
+import { useUpdateInventory } from "@/lib/hooks/use-inventory";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -22,20 +25,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useUpdateInventory } from "@/hooks/inventory/use-update-inventory";
-import InventoryResponse from "@/lib/schemas/inventory/inventory-response";
 
-const editInventorySchema = z.object({
-  quantityAvailable: z.number().int().min(0, "Quantity cannot be negative"),
-});
-
-type EditInventoryFormValues = z.infer<typeof editInventorySchema>;
+type EditInventoryFormValues = z.infer<typeof UpdateInventoryRequestValidation>;
 
 interface EditInventoryDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   inventory: InventoryResponse;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function EditInventoryDialog({
@@ -43,34 +39,38 @@ export function EditInventoryDialog({
   onOpenChange,
   inventory,
 }: EditInventoryDialogProps) {
-  const { handleUpdateInventory, isLoading } = useUpdateInventory();
+  const { mutate: updateInventory, isPending } = useUpdateInventory();
 
   const form = useForm<EditInventoryFormValues>({
-    resolver: zodResolver(editInventorySchema),
+    resolver: zodResolver(UpdateInventoryRequestValidation),
     defaultValues: {
       quantityAvailable: inventory.quantityAvailable,
     },
   });
 
   async function onSubmit(values: EditInventoryFormValues) {
-    const success = await handleUpdateInventory(inventory.id, {
+    const request: UpdateInventoryRequest = {
       quantityAvailable: values.quantityAvailable,
-    });
+    };
 
-    if (success) {
-      onOpenChange(false);
-    }
+    updateInventory(
+      {
+        id: inventory.id,
+        data: request,
+      },
+      {
+        onSuccess: () => onOpenChange(false),
+      },
+    );
   }
-
-  const busy = isLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-125">
         <DialogHeader>
-          <DialogTitle>Edit Inventory</DialogTitle>
+          <DialogTitle>Chỉnh sửa tồn kho</DialogTitle>
           <DialogDescription>
-            Update stock quantity for{" "}
+            Cập nhật số lượng tồn kho cho{" "}
             <strong>{inventory.plantVariant?.sku ?? inventory.id}</strong>.
           </DialogDescription>
         </DialogHeader>
@@ -80,10 +80,10 @@ export function EditInventoryDialog({
             <FormField
               control={form.control}
               name="quantityAvailable"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity Available</FormLabel>
+                  <FormLabel>Số lượng khả dụng</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -106,13 +106,15 @@ export function EditInventoryDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={busy}
+                disabled={isPending}
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit" disabled={busy}>
-                {busy && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-                Save
+              <Button type="submit" disabled={isPending}>
+                {isPending && (
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
+                )}
+                Lưu
               </Button>
             </DialogFooter>
           </form>

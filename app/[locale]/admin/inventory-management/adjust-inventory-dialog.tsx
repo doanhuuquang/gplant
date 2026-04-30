@@ -1,11 +1,15 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { AdjustInventoryRequest, InventoryResponse } from "@/types/inventory";
+import { AdjustInventoryRequestValidation } from "@/validations/inventory";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { useAdjustInventory } from "@/lib/hooks/use-inventory";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -22,25 +26,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useAdjustInventory } from "@/hooks/inventory/use-adjust-inventory";
-import InventoryResponse from "@/lib/schemas/inventory/inventory-response";
 
-const adjustInventorySchema = z.object({
-  quantity: z
-    .number()
-    .int()
-    .refine((v) => v !== 0, "Quantity cannot be zero"),
-  reason: z.string().optional(),
-});
-
-type AdjustInventoryFormValues = z.infer<typeof adjustInventorySchema>;
+type AdjustInventoryFormValues = z.infer<
+  typeof AdjustInventoryRequestValidation
+>;
 
 interface AdjustInventoryDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   inventory: InventoryResponse;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function AdjustInventoryDialog({
@@ -48,10 +42,10 @@ export function AdjustInventoryDialog({
   onOpenChange,
   inventory,
 }: AdjustInventoryDialogProps) {
-  const { handleAdjustInventory, isLoading } = useAdjustInventory();
+  const { mutate: adjustInventory, isPending } = useAdjustInventory();
 
   const form = useForm<AdjustInventoryFormValues>({
-    resolver: zodResolver(adjustInventorySchema),
+    resolver: zodResolver(AdjustInventoryRequestValidation),
     defaultValues: {
       quantity: 0,
       reason: "",
@@ -63,29 +57,35 @@ export function AdjustInventoryDialog({
   };
 
   async function onSubmit(values: AdjustInventoryFormValues) {
-    const success = await handleAdjustInventory(inventory.id, {
+    const request: AdjustInventoryRequest = {
       quantity: values.quantity,
       reason: values.reason || undefined,
-    });
+    };
 
-    if (success) {
-      resetForm();
-      onOpenChange(false);
-    }
+    adjustInventory(
+      {
+        id: inventory.id,
+        data: request,
+      },
+      {
+        onSuccess: () => {
+          resetForm();
+          onOpenChange(false);
+        },
+      },
+    );
   }
-
-  const busy = isLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-125">
         <DialogHeader>
-          <DialogTitle>Adjust Inventory</DialogTitle>
+          <DialogTitle>Điều chỉnh tồn kho</DialogTitle>
           <DialogDescription>
-            Adjust stock for{" "}
-            <strong>{inventory.plantVariant?.sku ?? inventory.id}</strong>.
-            Current available: <strong>{inventory.quantityAvailable}</strong>.
-            Use positive values to add stock, negative values to remove.
+            Điều chỉnh tồn kho cho{" "}
+            <strong>{inventory.plantVariant?.sku ?? inventory.id}</strong>. Hiện
+            khả dụng: <strong>{inventory.quantityAvailable}</strong>. Dùng số
+            dương để thêm hàng, số âm để trừ hàng.
           </DialogDescription>
         </DialogHeader>
 
@@ -94,14 +94,14 @@ export function AdjustInventoryDialog({
             <FormField
               control={form.control}
               name="quantity"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Adjustment Quantity</FormLabel>
+                  <FormLabel>Số lượng điều chỉnh</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
-                      placeholder="e.g. +10 or -5"
+                      placeholder="Ví dụ: +10 hoặc -5"
                       {...field}
                       value={field.value || ""}
                       onChange={(e) => {
@@ -118,15 +118,12 @@ export function AdjustInventoryDialog({
             <FormField
               control={form.control}
               name="reason"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reason (optional)</FormLabel>
+                  <FormLabel>Lý do (tùy chọn)</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Reason for adjustment..."
-                      {...field}
-                    />
+                    <Textarea placeholder="Lý do điều chỉnh..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -141,13 +138,15 @@ export function AdjustInventoryDialog({
                   resetForm();
                   onOpenChange(false);
                 }}
-                disabled={busy}
+                disabled={isPending}
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit" disabled={busy}>
-                {busy && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-                Adjust
+              <Button type="submit" disabled={isPending}>
+                {isPending && (
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
+                )}
+                Điều chỉnh
               </Button>
             </DialogFooter>
           </form>

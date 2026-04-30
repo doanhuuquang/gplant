@@ -1,15 +1,15 @@
 "use client";
 
-import { LightningSaleResponse } from "@/lib/schemas/lightning-sale/lightning-sale-response";
-import { LightningSaleItemResponse } from "@/lib/schemas/lightning-sale/lightning-sale-item-response";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CirclePlus, SquarePen, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import { useState } from "react";
-import { useRemoveSaleItem } from "@/hooks/lightning-sale/use-remove-sale-item";
-import { useUpdateSaleItem } from "@/hooks/lightning-sale/use-update-sale-item";
-
+import {
+  useDeleteLightningSaleItem,
+  useUpdateLightningSaleItem,
+} from "@/lib/hooks/use-lightning-sale";
 import {
   Dialog,
   DialogContent,
@@ -42,21 +42,29 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EditSaleItemDialog } from "@/app/[locale]/admin/lightning-sales-management/edit-sale-item-dialog";
 import { AddSaleItemDialog } from "@/app/[locale]/admin/lightning-sales-management/add-sale-item-dialog";
+import {
+  LightningSaleItemResponse,
+  LightningSaleResponse,
+  UpdateLightningSaleItemRequest,
+} from "@/types/lightning-sale";
 
 interface SaleDetailDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   sale: LightningSaleResponse;
+  onOpenChange: (open: boolean) => void;
 }
 
 function ItemActiveSwitch({ item }: { item: LightningSaleItemResponse }) {
-  const { handleUpdateSaleItem } = useUpdateSaleItem();
+  const { mutate: updateSaleItem } = useUpdateLightningSaleItem();
 
   return (
     <Switch
       defaultChecked={item.isActive}
       onCheckedChange={(checked) =>
-        handleUpdateSaleItem(item.id, { isActive: checked })
+        updateSaleItem({
+          lightningSaleItemId: item.id,
+          data: { isActive: checked } as UpdateLightningSaleItemRequest,
+        })
       }
     />
   );
@@ -65,13 +73,24 @@ function ItemActiveSwitch({ item }: { item: LightningSaleItemResponse }) {
 function ItemActions({ item }: { item: LightningSaleItemResponse }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const { handleRemoveSaleItem, isLoading } = useRemoveSaleItem();
+
+  const { mutate: deleteLightningSaleItem, isPending } =
+    useDeleteLightningSaleItem();
 
   const onConfirmRemove = async () => {
-    const success = await handleRemoveSaleItem(item.id);
-    if (success) {
-      setDeleteOpen(false);
-    }
+    deleteLightningSaleItem(item.id, {
+      onSuccess: (response) => {
+        setDeleteOpen(false);
+
+        toast.success("Thành công", {
+          description: response?.message,
+        });
+      },
+      onError: (error) =>
+        toast.success("Thông báo", {
+          description: error?.message,
+        }),
+    });
   };
 
   return (
@@ -83,7 +102,7 @@ function ItemActions({ item }: { item: LightningSaleItemResponse }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Edit</p>
+          <p>Chỉnh sửa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -98,7 +117,7 @@ function ItemActions({ item }: { item: LightningSaleItemResponse }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Remove</p>
+          <p>Gỡ</p>
         </TooltipContent>
       </Tooltip>
 
@@ -112,20 +131,20 @@ function ItemActions({ item }: { item: LightningSaleItemResponse }) {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove sale item</AlertDialogTitle>
+            <AlertDialogTitle>Gỡ sản phẩm khuyến mãi</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove this item from the sale? This
-              action cannot be undone.
+              Bạn có chắc muốn gỡ sản phẩm này khỏi chương trình sale? Hành động
+              này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
             <AlertDialogAction
               onClick={onConfirmRemove}
-              disabled={isLoading}
+              disabled={isPending}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
-              {isLoading ? "Removing..." : "Remove"}
+              {isPending ? "Đang gỡ..." : "Gỡ"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -156,9 +175,9 @@ export function SaleDetailDialog({
             <DialogTitle className="flex items-center gap-2">
               {sale.name}
               {sale.isActive ? (
-                <Badge variant="default">Active</Badge>
+                <Badge variant="default">Đang bật</Badge>
               ) : (
-                <Badge variant="secondary">Inactive</Badge>
+                <Badge variant="secondary">Đang tắt</Badge>
               )}
             </DialogTitle>
             <DialogDescription>{sale.description}</DialogDescription>
@@ -166,7 +185,7 @@ export function SaleDetailDialog({
 
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              {sale.totalItems} items ({sale.activeItems} active)
+              {sale.totalItems} sản phẩm ({sale.activeItems} đang bật)
             </div>
             <Button
               variant="outline"
@@ -174,7 +193,7 @@ export function SaleDetailDialog({
               onClick={() => setAddItemOpen(true)}
             >
               <CirclePlus className="mr-2 size-4" />
-              Add Item
+              Thêm sản phẩm
             </Button>
           </div>
 
@@ -182,13 +201,13 @@ export function SaleDetailDialog({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Variant SKU</TableHead>
-                  <TableHead>Original Price</TableHead>
-                  <TableHead>Sale Price</TableHead>
-                  <TableHead>Discount</TableHead>
-                  <TableHead>Sold / Limit</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>Biến thể SKU</TableHead>
+                  <TableHead>Giá gốc</TableHead>
+                  <TableHead>Giá sale</TableHead>
+                  <TableHead>Giảm giá</TableHead>
+                  <TableHead>Đã bán / Giới hạn</TableHead>
+                  <TableHead>Kích hoạt</TableHead>
+                  <TableHead>Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -196,7 +215,7 @@ export function SaleDetailDialog({
                   sale.items.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">
-                        {item.plantVariant?.sku ?? "N/A"}
+                        {item.salePlantVariant?.sku ?? "Không có"}
                       </TableCell>
                       <TableCell>
                         {formatCurrency(item.originalPrice)}
@@ -215,7 +234,7 @@ export function SaleDetailDialog({
                             {item.quantitySold}/{item.quantityLimit}
                           </span>
                           {item.isSoldOut && (
-                            <Badge variant="destructive">Sold Out</Badge>
+                            <Badge variant="destructive">Đã bán hết</Badge>
                           )}
                         </div>
                       </TableCell>
@@ -233,8 +252,8 @@ export function SaleDetailDialog({
                       colSpan={7}
                       className="h-24 text-center text-muted-foreground"
                     >
-                      No items in this sale. Click &quot;Add Item&quot; to get
-                      started.
+                      Chưa có sản phẩm nào trong chương trình sale này. Nhấn
+                      &quot;Thêm sản phẩm&quot; để bắt đầu.
                     </TableCell>
                   </TableRow>
                 )}

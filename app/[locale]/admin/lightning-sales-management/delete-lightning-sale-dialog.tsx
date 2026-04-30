@@ -1,8 +1,7 @@
 "use client";
 
-import { LightningSaleResponse } from "@/lib/schemas/lightning-sale/lightning-sale-response";
-import { useDeleteLightningSale } from "@/hooks/lightning-sale/use-delete-lightning-sale";
-
+import { LightningSaleResponse } from "@/types/lightning-sale";
+import { useDeleteLightningSale } from "@/lib/hooks/use-lightning-sale";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +15,8 @@ import {
 
 interface DeleteLightningSaleDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   sale: LightningSaleResponse;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
@@ -27,35 +26,36 @@ export function DeleteLightningSaleDialog({
   sale,
   onSuccess,
 }: DeleteLightningSaleDialogProps) {
-  const { handleDeleteLightningSale, isLoading } = useDeleteLightningSale();
+  const { mutate: deleteLightningSale, isPending } = useDeleteLightningSale();
 
-  const onConfirmDelete = async () => {
-    const success = await handleDeleteLightningSale(sale.id);
-    if (success) {
-      onOpenChange(false);
-      onSuccess?.();
-    }
+  const handleDeleteLightningSale = async () => {
+    deleteLightningSale(sale.id, {
+      onSuccess: () => {
+        onOpenChange(false);
+        onSuccess?.();
+      },
+    });
   };
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete lightning sale</AlertDialogTitle>
+          <AlertDialogTitle>Xóa lightning sale</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete the lightning sale{" "}
-            <strong>{sale.name}</strong>? This action cannot be undone and all
-            sale items will be removed.
+            Bạn có chắc muốn xóa lightning sale <strong>{sale.name}</strong>?
+            Hành động này không thể hoàn tác và toàn bộ sản phẩm khuyến mãi sẽ
+            bị xóa.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirmDelete}
-            disabled={isLoading}
+            onClick={handleDeleteLightningSale}
+            disabled={isPending}
             className="bg-destructive text-white hover:bg-destructive/90"
           >
-            {isLoading ? "Deleting..." : "Delete"}
+            {isPending ? "Đang xóa..." : "Xóa"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

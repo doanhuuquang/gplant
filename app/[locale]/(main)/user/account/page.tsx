@@ -1,20 +1,19 @@
 "use client";
 
 import Image from "next/image";
-import MediaResponse from "@/lib/schemas/media/media-response";
-import z, { email } from "zod";
 import { Button } from "@/components/ui/button";
 import { getFileUrl } from "@/utils/helpers";
 import { Input } from "@/components/ui/input";
 import { LoaderCircle, Upload, UserCircle } from "lucide-react";
 import { toast } from "sonner";
-import { uploadMedia as uploadMediaApi } from "@/services/media-service";
-import { useAuth } from "@/hooks/auth/use-auth";
+import { UpdateUserRequest } from "@/types/user";
+import { UpdateUserRequestValidation } from "@/validations/user";
+import { useAuthStore } from "@/lib/stores/auth-store";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useUpdateProfile } from "@/hooks/user/use-update-profile";
+import { useUpdateProfile } from "@/lib/hooks/use-user";
+import { useUploadMedia } from "@/lib/hooks/use-media";
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import {
   Form,
   FormControl,
@@ -24,38 +23,20 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-const accountSchema = z.object({
-  email: email(),
-  firstName: z
-    .string()
-    .min(1, "First name is required")
-    .max(30, "First name is too long"),
-  lastName: z
-    .string()
-    .min(1, "Last name is required")
-    .max(30, "Last name is too long"),
-  phoneNumber: z
-    .string()
-    .min(1, "Shipping phone is required")
-    .max(10, "Shipping phone is invalid")
-    .regex(/^0\d{9}$/, "Shipping phone is invalid"),
-  profilePictureUrl: z.string(),
-});
-
-type AccountFormValues = z.infer<typeof accountSchema>;
-
 export default function Page() {
-  const { user } = useAuth();
-  const { handleUpdateProfile, isUpdatingProfile } = useUpdateProfile();
-
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<AccountFormValues>({
-    resolver: zodResolver(accountSchema),
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading] = useState(false);
+
+  const { user } = useAuthStore();
+  const { mutate: updateProfile, isPending: isUpdatingProfile } =
+    useUpdateProfile();
+  const { mutate: uploadMedia } = useUploadMedia("");
+
+  const form = useForm<UpdateUserRequest>({
+    resolver: zodResolver(UpdateUserRequestValidation),
     defaultValues: {
-      email: user?.email ?? "",
       firstName: user?.firstName ?? "",
       lastName: user?.lastName ?? "",
       phoneNumber: user?.phoneNumber ?? "",
@@ -66,7 +47,6 @@ export default function Page() {
   useEffect(() => {
     if (user) {
       form.reset({
-        email: user.email ?? "",
         firstName: user.firstName ?? "",
         lastName: user.lastName ?? "",
         phoneNumber: user.phoneNumber ?? "",
@@ -75,42 +55,30 @@ export default function Page() {
     }
   }, [user, form]);
 
-  async function onSubmit(values: AccountFormValues) {
-    let profilePictureUrl = values.profilePictureUrl;
+  async function onSubmit(values: UpdateUserRequest) {
     if (selectedFile) {
-      try {
-        setIsUploading(true);
-        const response = await uploadMediaApi(selectedFile);
-        const media = response.data as MediaResponse;
-        profilePictureUrl = media.fileUrl;
-        toast.success("Upload successful", {
-          description: "Image has been uploaded.",
-        });
-      } catch {
-        toast.error("Upload failed", {
-          description: "Failed to upload image.",
-        });
-        setIsUploading(false);
-        return;
-      } finally {
-        setIsUploading(false);
-      }
+      uploadMedia(selectedFile, {
+        onSuccess: (response) => {
+          const request: UpdateUserRequest = {
+            ...values,
+            profilePictureUrl: response.data.fileUrl,
+          };
+          updateProfile(request);
+          setSelectedFile(null);
+        },
+      });
+    } else {
+      updateProfile(values);
+      setSelectedFile(null);
     }
-    await handleUpdateProfile({
-      firstName: values.firstName,
-      lastName: values.lastName,
-      phoneNumber: values.phoneNumber,
-      profilePictureUrl,
-    });
-    setSelectedFile(null);
   }
 
   const handleUploadNew = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error("Invalid file", {
-        description: "Please select an image file.",
+      toast.error("Tệp không hợp lệ", {
+        description: "Vui lòng chọn tệp hình ảnh.",
       });
       return;
     }
@@ -122,8 +90,8 @@ export default function Page() {
   return (
     <div className="w-full space-y-10">
       <div>
-        <p className="text-2xl font-semibold">Profile</p>
-        <p className="text-muted-foreground">General Information</p>
+        <p className="text-2xl font-semibold">Hồ sơ</p>
+        <p className="text-muted-foreground">Thông tin chung</p>
       </div>
 
       <Form {...form}>
@@ -142,7 +110,7 @@ export default function Page() {
                       {selectedFile ? (
                         <Image
                           src={URL.createObjectURL(selectedFile)}
-                          alt="Profile"
+                          alt="Ảnh đại diện"
                           fill
                           className="object-cover"
                           unoptimized
@@ -150,7 +118,7 @@ export default function Page() {
                       ) : field.value ? (
                         <Image
                           src={getFileUrl(field.value)}
-                          alt="Profile"
+                          alt="Ảnh đại diện"
                           fill
                           className="object-cover"
                           unoptimized
@@ -174,7 +142,7 @@ export default function Page() {
                         ) : (
                           <Upload className="mr-2 size-4" />
                         )}
-                        Upload new image
+                        Tải ảnh mới
                       </Button>
                       <input
                         ref={fileInputRef}
@@ -191,28 +159,22 @@ export default function Page() {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem className="gap-1">
-                <FormLabel className="text-sm">Email</FormLabel>
-                <FormControl>
-                  <Input placeholder="Email" disabled={true} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <FormItem className="gap-1">
+            <FormLabel className="text-sm">Email</FormLabel>
+            <FormControl>
+              <Input placeholder="Email" disabled={true} value={user?.email} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
 
           <FormField
             control={form.control}
             name="firstName"
             render={({ field }) => (
               <FormItem className="gap-1">
-                <FormLabel className="text-sm">First Name</FormLabel>
+                <FormLabel className="text-sm">Tên</FormLabel>
                 <FormControl>
-                  <Input placeholder="First name" {...field} />
+                  <Input placeholder="Nhập tên" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -224,9 +186,9 @@ export default function Page() {
             name="lastName"
             render={({ field }) => (
               <FormItem className="gap-1">
-                <FormLabel className="text-sm">Last Name</FormLabel>
+                <FormLabel className="text-sm">Họ</FormLabel>
                 <FormControl>
-                  <Input placeholder="Last name" {...field} />
+                  <Input placeholder="Nhập họ" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -238,9 +200,9 @@ export default function Page() {
             name="phoneNumber"
             render={({ field }) => (
               <FormItem className="gap-1">
-                <FormLabel className="text-sm">Phone number</FormLabel>
+                <FormLabel className="text-sm">Số điện thoại</FormLabel>
                 <FormControl>
-                  <Input placeholder="Phone number" {...field} />
+                  <Input placeholder="Nhập số điện thoại" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -252,12 +214,9 @@ export default function Page() {
             className="mt-auto"
           >
             {isUpdatingProfile ? (
-              <>
-                <LoaderCircle className="animate-spin" />
-                Saving...
-              </>
+              <LoaderCircle className="animate-spin" />
             ) : (
-              "Update"
+              "Cập nhật"
             )}
           </Button>
         </form>

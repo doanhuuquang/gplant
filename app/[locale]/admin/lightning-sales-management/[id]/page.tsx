@@ -1,24 +1,28 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useGetLightningSaleById } from "@/hooks/lightning-sale/use-get-lightning-sale-by-id";
-import { useAdminHeader } from "@/hooks/use-admin-header";
-import { useRemoveSaleItem } from "@/hooks/lightning-sale/use-remove-sale-item";
-import { useUpdateSaleItem } from "@/hooks/lightning-sale/use-update-sale-item";
-import { LightningSaleItemResponse } from "@/lib/schemas/lightning-sale/lightning-sale-item-response";
+import { AddSaleItemDialog } from "../add-sale-item-dialog";
+import { APP_PATHS } from "@/lib/constants/app-paths";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Calendar, CirclePlus, SquarePen, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { AddSaleItemDialog } from "../add-sale-item-dialog";
-import { EditSaleItemDialog } from "../edit-sale-item-dialog";
-import { EditLightningSaleDialog } from "../edit-lightning-sale-dialog";
 import { DeleteLightningSaleDialog } from "../delete-lightning-sale-dialog";
-import { APP_PATHS } from "@/lib/constants/app-paths";
-import { useRouter } from "next/navigation";
+import { EditLightningSaleDialog } from "../edit-lightning-sale-dialog";
+import { EditSaleItemDialog } from "../edit-sale-item-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-
+import { Switch } from "@/components/ui/switch";
+import { useAdminHeader } from "@/lib/hooks/use-admin-header";
+import { useMemo, useState } from "react";
+import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import {
+  LightningSaleItemResponse,
+  UpdateLightningSaleItemRequest,
+} from "@/types/lightning-sale";
+import {
+  useDeleteLightningSaleItem,
+  useLightningSaleById,
+  useUpdateLightningSaleItem,
+} from "@/lib/hooks/use-lightning-sale";
 import {
   Table,
   TableBody,
@@ -69,14 +73,26 @@ function getSaleStatus(startDateUtc: string, endDateUtc: string) {
   return "unknown";
 }
 
+function getSaleStatusLabel(status: string) {
+  if (status === "ongoing") return "Đang diễn ra";
+  if (status === "upcoming") return "Sắp diễn ra";
+  if (status === "expired") return "Đã kết thúc";
+  return "Không xác định";
+}
+
 function ItemActiveSwitch({ item }: { item: LightningSaleItemResponse }) {
-  const { handleUpdateSaleItem } = useUpdateSaleItem();
+  const { mutate: updateLightningSaleItem } = useUpdateLightningSaleItem();
 
   return (
     <Switch
       defaultChecked={item.isActive}
       onCheckedChange={(checked) =>
-        handleUpdateSaleItem(item.id, { isActive: checked })
+        updateLightningSaleItem({
+          lightningSaleItemId: item.id,
+          data: {
+            isActive: checked,
+          } as UpdateLightningSaleItemRequest,
+        })
       }
     />
   );
@@ -85,13 +101,13 @@ function ItemActiveSwitch({ item }: { item: LightningSaleItemResponse }) {
 function ItemActions({ item }: { item: LightningSaleItemResponse }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const { handleRemoveSaleItem, isLoading } = useRemoveSaleItem();
+  const { mutate: deleteLightningSaleItem, isPending } =
+    useDeleteLightningSaleItem();
 
   const onConfirmRemove = async () => {
-    const success = await handleRemoveSaleItem(item.id);
-    if (success) {
-      setDeleteOpen(false);
-    }
+    deleteLightningSaleItem(item.id, {
+      onSuccess: () => setDeleteOpen(false),
+    });
   };
 
   return (
@@ -103,7 +119,7 @@ function ItemActions({ item }: { item: LightningSaleItemResponse }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Edit</p>
+          <p>Chỉnh sửa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -118,7 +134,7 @@ function ItemActions({ item }: { item: LightningSaleItemResponse }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Remove</p>
+          <p>Gỡ</p>
         </TooltipContent>
       </Tooltip>
 
@@ -132,20 +148,20 @@ function ItemActions({ item }: { item: LightningSaleItemResponse }) {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove sale item</AlertDialogTitle>
+            <AlertDialogTitle>Gỡ sản phẩm khuyến mãi</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove this item from the sale? This
-              action cannot be undone.
+              Bạn có chắc muốn gỡ sản phẩm này khỏi chương trình sale? Hành động
+              này không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
             <AlertDialogAction
               onClick={onConfirmRemove}
-              disabled={isLoading}
+              disabled={isPending}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
-              {isLoading ? "Removing..." : "Remove"}
+              {isPending ? "Đang gỡ..." : "Gỡ"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -158,10 +174,12 @@ export default function LightningSaleDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { sale, isLoading, error } = useGetLightningSaleById(id);
+
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const { data, isLoading, error } = useLightningSaleById(id);
 
   const headerActions = useMemo(
     () => (
@@ -178,7 +196,7 @@ export default function LightningSaleDetailPage() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Edit</p>
+            <p>Chỉnh sửa</p>
           </TooltipContent>
         </Tooltip>
 
@@ -194,21 +212,21 @@ export default function LightningSaleDetailPage() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Delete</p>
+            <p>Xóa</p>
           </TooltipContent>
         </Tooltip>
 
-        {sale && (
+        {data?.data && (
           <>
             <EditLightningSaleDialog
               open={editOpen}
               onOpenChange={setEditOpen}
-              sale={sale}
+              sale={data?.data}
             />
             <DeleteLightningSaleDialog
               open={deleteOpen}
               onOpenChange={setDeleteOpen}
-              sale={sale}
+              sale={data?.data}
               onSuccess={() =>
                 router.push(APP_PATHS.LIGHTNING_SALES_MANAGEMENT)
               }
@@ -217,13 +235,13 @@ export default function LightningSaleDetailPage() {
         )}
       </>
     ),
-    [editOpen, deleteOpen, sale, router],
+    [editOpen, deleteOpen, data, router],
   );
 
   useAdminHeader(headerActions);
 
-  const status = sale
-    ? getSaleStatus(sale.startDateUtc, sale.endDateUtc)
+  const status = data?.data
+    ? getSaleStatus(data?.data.startDateUtc, data?.data.endDateUtc)
     : "unknown";
   const statusVariants: Record<
     string,
@@ -235,13 +253,13 @@ export default function LightningSaleDetailPage() {
     unknown: "outline",
   };
 
-  if (!sale && !isLoading && !error) return null;
+  if (!data?.data && !isLoading && !error) return null;
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-2">
       {error && (
         <div className="rounded-sm border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
-          {error}
+          {error.message}
         </div>
       )}
 
@@ -257,61 +275,63 @@ export default function LightningSaleDetailPage() {
         </div>
       )}
 
-      {!isLoading && sale && (
+      {!isLoading && data?.data && (
         <>
           {/* Sale details card */}
           <div className="overflow-hidden rounded-sm border bg-card p-4">
-            <h2 className="mb-5 text-sm font-semibold">Sale Details</h2>
+            <h2 className="mb-5 text-sm font-semibold">
+              Chi tiết chương trình sale
+            </h2>
 
             <div className="space-y-4">
               <div className="grid grid-cols-[100px_1fr] items-center gap-x-3 text-sm sm:grid-cols-[120px_1fr] sm:gap-x-4">
-                <span className="text-muted-foreground">Name</span>
-                <p className="font-medium">{sale.name}</p>
+                <span className="text-muted-foreground">Tên</span>
+                <p className="font-medium">{data?.data.name}</p>
               </div>
 
               <div className="grid grid-cols-[100px_1fr] items-center gap-x-3 text-sm sm:grid-cols-[120px_1fr] sm:gap-x-4">
-                <span className="text-muted-foreground">Description</span>
-                <p>{sale.description}</p>
+                <span className="text-muted-foreground">Mô tả</span>
+                <p>{data?.data.description}</p>
               </div>
 
               <div className="grid grid-cols-[100px_1fr] items-center gap-x-3 text-sm sm:grid-cols-[120px_1fr] sm:gap-x-4">
-                <span className="text-muted-foreground">Status</span>
+                <span className="text-muted-foreground">Trạng thái</span>
                 <span className="inline-flex items-center gap-2">
                   <Badge variant={statusVariants[status] ?? "outline"}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                    {getSaleStatusLabel(status)}
                   </Badge>
-                  {sale.isActive ? (
-                    <Badge variant="default">Active</Badge>
+                  {data?.data.isActive ? (
+                    <Badge variant="default">Đang bật</Badge>
                   ) : (
-                    <Badge variant="secondary">Inactive</Badge>
+                    <Badge variant="secondary">Đang tắt</Badge>
                   )}
                 </span>
               </div>
 
               <div className="grid grid-cols-[100px_1fr] items-center gap-x-3 text-sm sm:grid-cols-[120px_1fr] sm:gap-x-4">
-                <span className="text-muted-foreground">Start Date</span>
+                <span className="text-muted-foreground">Ngày bắt đầu</span>
                 <span className="inline-flex items-center gap-2">
                   <Calendar className="size-4 text-muted-foreground" />
-                  {formatDate(sale.startDateUtc)}
+                  {formatDate(data?.data.startDateUtc)}
                 </span>
               </div>
 
               <div className="grid grid-cols-[100px_1fr] items-center gap-x-3 text-sm sm:grid-cols-[120px_1fr] sm:gap-x-4">
-                <span className="text-muted-foreground">End Date</span>
+                <span className="text-muted-foreground">Ngày kết thúc</span>
                 <span className="inline-flex items-center gap-2">
                   <Calendar className="size-4 text-muted-foreground" />
-                  {formatDate(sale.endDateUtc)}
+                  {formatDate(data?.data.endDateUtc)}
                 </span>
               </div>
 
               <div className="grid grid-cols-[100px_1fr] items-center gap-x-3 text-sm sm:grid-cols-[120px_1fr] sm:gap-x-4">
-                <span className="text-muted-foreground">Total Items</span>
-                <p>{sale.totalItems}</p>
+                <span className="text-muted-foreground">Tổng sản phẩm</span>
+                <p>{data?.data.totalItems}</p>
               </div>
 
               <div className="grid grid-cols-[100px_1fr] items-center gap-x-3 text-sm sm:grid-cols-[120px_1fr] sm:gap-x-4">
-                <span className="text-muted-foreground">Active Items</span>
-                <p>{sale.activeItems}</p>
+                <span className="text-muted-foreground">Sản phẩm đang bật</span>
+                <p>{data?.data.activeItems}</p>
               </div>
             </div>
           </div>
@@ -319,10 +339,10 @@ export default function LightningSaleDetailPage() {
           {/* Sale items card */}
           <div className="overflow-hidden rounded-sm border bg-card p-4">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Sale Items</h2>
+              <h2 className="text-sm font-semibold">Sản phẩm khuyến mãi</h2>
               <Button variant="outline" onClick={() => setAddItemOpen(true)}>
                 <CirclePlus />
-                Add Item
+                Thêm sản phẩm
               </Button>
             </div>
 
@@ -331,22 +351,22 @@ export default function LightningSaleDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Variant SKU</TableHead>
-                    <TableHead>Original Price</TableHead>
-                    <TableHead>Sale Price</TableHead>
-                    <TableHead>Discount</TableHead>
-                    <TableHead>Sold / Limit</TableHead>
-                    <TableHead>Progress</TableHead>
-                    <TableHead>Active</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Biến thể SKU</TableHead>
+                    <TableHead>Giá gốc</TableHead>
+                    <TableHead>Giá sale</TableHead>
+                    <TableHead>Giảm giá</TableHead>
+                    <TableHead>Đã bán / Giới hạn</TableHead>
+                    <TableHead>Tiến độ</TableHead>
+                    <TableHead>Kích hoạt</TableHead>
+                    <TableHead>Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sale.items.length > 0 ? (
-                    sale.items.map((item) => (
+                  {data?.data.items.length > 0 ? (
+                    data?.data.items.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
-                          {item.salePlantVariant?.sku ?? "N/A"}
+                          {item.salePlantVariant?.sku ?? "Không có"}
                         </TableCell>
                         <TableCell>
                           {formatCurrency(item.originalPrice)}
@@ -365,7 +385,7 @@ export default function LightningSaleDetailPage() {
                               {item.quantitySold}/{item.quantityLimit}
                             </span>
                             {item.isSoldOut && (
-                              <Badge variant="destructive">Sold Out</Badge>
+                              <Badge variant="destructive">Đã bán hết</Badge>
                             )}
                           </div>
                         </TableCell>
@@ -398,8 +418,8 @@ export default function LightningSaleDetailPage() {
                         colSpan={8}
                         className="h-24 text-center text-muted-foreground"
                       >
-                        No items in this sale. Click &quot;Add Item&quot; to get
-                        started.
+                        Chưa có sản phẩm nào trong chương trình sale này. Nhấn
+                        &quot;Thêm sản phẩm&quot; để bắt đầu.
                       </TableCell>
                     </TableRow>
                   )}
@@ -411,11 +431,11 @@ export default function LightningSaleDetailPage() {
       )}
 
       {/* Dialogs */}
-      {sale && (
+      {data?.data && (
         <AddSaleItemDialog
           open={addItemOpen}
           onOpenChange={setAddItemOpen}
-          saleId={sale.id}
+          saleId={data?.data.id}
         />
       )}
     </div>

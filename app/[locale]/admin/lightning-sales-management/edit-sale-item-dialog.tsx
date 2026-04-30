@@ -1,11 +1,18 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  LightningSaleItemResponse,
+  UpdateLightningSaleItemRequest,
+} from "@/types/lightning-sale";
+import { UpdateLightningSaleItemRequestValidation } from "@/validations/lightning-sale";
+import { useForm } from "react-hook-form";
+import { useUpdateLightningSaleItem } from "@/lib/hooks/use-lightning-sale";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -22,26 +29,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { useUpdateSaleItem } from "@/hooks/lightning-sale/use-update-sale-item";
-import { LightningSaleItemResponse } from "@/lib/schemas/lightning-sale/lightning-sale-item-response";
 
-const editSaleItemSchema = z.object({
-  salePrice: z.number().positive("Sale price must be greater than 0"),
-  quantityLimit: z
-    .number()
-    .int()
-    .positive("Quantity limit must be greater than 0"),
-  isActive: z.boolean(),
-});
-
-type EditSaleItemFormValues = z.infer<typeof editSaleItemSchema>;
+type EditSaleItemFormValues = z.infer<
+  typeof UpdateLightningSaleItemRequestValidation
+>;
 
 interface EditSaleItemDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   item: LightningSaleItemResponse;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function EditSaleItemDialog({
@@ -49,10 +45,11 @@ export function EditSaleItemDialog({
   onOpenChange,
   item,
 }: EditSaleItemDialogProps) {
-  const { handleUpdateSaleItem, isLoading } = useUpdateSaleItem();
+  const { mutate: updateLightningSaleItem, isPending } =
+    useUpdateLightningSaleItem();
 
   const form = useForm<EditSaleItemFormValues>({
-    resolver: zodResolver(editSaleItemSchema),
+    resolver: zodResolver(UpdateLightningSaleItemRequestValidation),
     defaultValues: {
       salePrice: item.salePrice,
       quantityLimit: item.quantityLimit,
@@ -61,26 +58,30 @@ export function EditSaleItemDialog({
   });
 
   async function onSubmit(values: EditSaleItemFormValues) {
-    const success = await handleUpdateSaleItem(item.id, {
+    const request: UpdateLightningSaleItemRequest = {
       salePrice: values.salePrice,
       quantityLimit: values.quantityLimit,
       isActive: values.isActive,
-    });
+    };
 
-    if (success) {
-      onOpenChange(false);
-    }
+    updateLightningSaleItem(
+      {
+        lightningSaleItemId: item.id,
+        data: request,
+      },
+      {
+        onSuccess: () => onOpenChange(false),
+      },
+    );
   }
-
-  const busy = isLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Sale Item</DialogTitle>
+          <DialogTitle>Chỉnh sửa sản phẩm khuyến mãi</DialogTitle>
           <DialogDescription>
-            Update the sale item details. Original price:{" "}
+            Cập nhật thông tin sản phẩm khuyến mãi. Giá gốc:{" "}
             {new Intl.NumberFormat("vi-VN", {
               style: "currency",
               currency: "VND",
@@ -93,14 +94,14 @@ export function EditSaleItemDialog({
             <FormField
               control={form.control}
               name="salePrice"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Sale Price (VND)</FormLabel>
+                  <FormLabel>Giá sale (VND)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
-                      placeholder="Enter sale price"
+                      placeholder="Nhập giá sale"
                       {...field}
                       value={field.value || ""}
                       onChange={(e) => {
@@ -117,16 +118,16 @@ export function EditSaleItemDialog({
             <FormField
               control={form.control}
               name="quantityLimit"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    Quantity Limit (sold: {item.quantitySold})
+                    Giới hạn số lượng (đã bán: {item.quantitySold})
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="number"
-                      placeholder="Max quantity to sell"
+                      placeholder="Số lượng bán tối đa"
                       {...field}
                       value={field.value || ""}
                       onChange={(e) => {
@@ -143,15 +144,15 @@ export function EditSaleItemDialog({
             <FormField
               control={form.control}
               name="isActive"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-sm border p-3">
-                  <FormLabel className="cursor-pointer">Active</FormLabel>
+                  <FormLabel className="cursor-pointer">Kích hoạt</FormLabel>
                   <FormControl>
                     <Switch
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      disabled={busy}
+                      disabled={isPending}
                     />
                   </FormControl>
                 </FormItem>
@@ -163,13 +164,15 @@ export function EditSaleItemDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={busy}
+                disabled={isPending}
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit" disabled={busy}>
-                {busy && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-                Save
+              <Button type="submit" disabled={isPending}>
+                {isPending && (
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
+                )}
+                Lưu
               </Button>
             </DialogFooter>
           </form>

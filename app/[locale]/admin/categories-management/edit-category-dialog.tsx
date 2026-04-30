@@ -1,13 +1,21 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { useState } from "react";
-import { ImagePlus, LoaderCircle, X } from "lucide-react";
-import { getFileUrl } from "@/utils/helpers";
-
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { CategoryResponse, UpdateCategoryRequest } from "@/types/category";
+import { getFileUrl } from "@/utils/helpers";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle, X } from "lucide-react";
+import { MediaPickerDialog } from "@/components/feature/media/media-picker-dialog";
+import { MediaResponse } from "@/types/media";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { UpdateCategoryRequestValidation } from "@/validations/category";
+import { useCategories, useUpdateCategory } from "@/lib/hooks/use-category";
+import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -24,8 +32,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -33,27 +39,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useUpdateCategory } from "@/hooks/category/use-update-category";
-import { useGetCategories } from "@/hooks/category/use-get-categories";
-import { MediaPickerDialog } from "@/components/shared/media-picker-dialog";
-import MediaResponse from "@/lib/schemas/media/media-response";
-import CategoryResponse from "@/lib/schemas/category/category-response";
-import Image from "next/image";
 
-const editCategorySchema = z.object({
-  name: z.string().min(1, "Category name is required"),
-  description: z.string().min(1, "Description is required"),
-  parentId: z.string().optional(),
-  isActive: z.boolean(),
-});
-
-type EditCategoryFormValues = z.infer<typeof editCategorySchema>;
+type EditCategoryFormValues = z.infer<typeof UpdateCategoryRequestValidation>;
 
 interface EditCategoryDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   category: CategoryResponse | null;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function EditCategoryDialog({
@@ -61,12 +53,10 @@ export function EditCategoryDialog({
   onOpenChange,
   category,
 }: EditCategoryDialogProps) {
-  const { handleUpdateCategory, isLoading } = useUpdateCategory();
-  const { categories } = useGetCategories();
   const [selectedMedia, setSelectedMedia] = useState<MediaResponse | null>(
     category?.media
       ? {
-          id: "",
+          id: category.media.id,
           fileName: category.name,
           fileUrl: category.media.fileUrl,
           fileSize: "",
@@ -78,11 +68,15 @@ export function EditCategoryDialog({
   );
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
 
+  const { mutate: updateCategory, isPending } = useUpdateCategory();
+  const { data } = useCategories();
+
   const form = useForm<EditCategoryFormValues>({
-    resolver: zodResolver(editCategorySchema),
+    resolver: zodResolver(UpdateCategoryRequestValidation),
     defaultValues: {
       name: category?.name ?? "",
       description: category?.description ?? "",
+      mediaId: category?.media ? category.media.id : undefined,
       parentId: category?.parentId ?? undefined,
       isActive: category?.isActive ?? true,
     },
@@ -95,32 +89,36 @@ export function EditCategoryDialog({
   async function onSubmit(values: EditCategoryFormValues) {
     if (!category) return;
 
-    const success = await handleUpdateCategory(category.id, {
+    const request: UpdateCategoryRequest = {
       name: values.name,
       description: values.description,
       mediaId: selectedMedia?.id || undefined,
       parentId: values.parentId || undefined,
       isActive: values.isActive,
-    });
+    };
 
-    if (success) {
-      onOpenChange(false);
-    }
+    updateCategory(
+      {
+        id: category.id,
+        request: request,
+      },
+      {
+        onSuccess: () => onOpenChange(false),
+      },
+    );
   }
 
   // Filter out the current category from parent options to prevent self-reference
-  const parentOptions = categories.filter((c) => c.id !== category?.id);
-
-  const busy = isLoading;
+  const parentOptions = data?.data.filter((c) => c.id !== category?.id);
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-125 max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
+            <DialogTitle>Chỉnh sửa danh mục</DialogTitle>
             <DialogDescription>
-              Update the category details below.
+              Cập nhật thông tin danh mục bên dưới.
             </DialogDescription>
           </DialogHeader>
 
@@ -132,9 +130,9 @@ export function EditCategoryDialog({
               <div className="flex-1 overflow-y-auto space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {/* Image Selection */}
                 <div className="space-y-2">
-                  <FormLabel>Image (optional)</FormLabel>
+                  <FormLabel>Hình ảnh (tùy chọn)</FormLabel>
                   <div className="flex items-center gap-4">
-                    {selectedMedia ? (
+                    {selectedMedia && (
                       <div className="relative size-24 rounded-sm overflow-hidden border">
                         <Image
                           src={getFileUrl(selectedMedia.fileUrl)}
@@ -143,49 +141,36 @@ export function EditCategoryDialog({
                           className="object-cover"
                           unoptimized
                         />
-                        <button
-                          type="button"
+                        <Button
+                          size={"icon"}
                           onClick={removeImage}
-                          disabled={busy}
+                          disabled={isPending}
                           className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80 transition-colors"
                         >
                           <X className="size-3.5" />
-                        </button>
+                        </Button>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setMediaPickerOpen(true)}
-                        disabled={busy}
-                        className="flex size-24 flex-col items-center justify-center gap-1 rounded-sm border border-dashed border-muted-foreground/50 text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
-                      >
-                        <ImagePlus className="size-6" />
-                        <span className="text-xs">Choose</span>
-                      </button>
                     )}
-                    {selectedMedia && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={busy}
-                        onClick={() => setMediaPickerOpen(true)}
-                      >
-                        Change
-                      </Button>
-                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isPending}
+                      onClick={() => setMediaPickerOpen(true)}
+                    >
+                      {selectedMedia ? "Đổi ảnh" : "Chọn ảnh"}
+                    </Button>
                   </div>
                 </div>
 
                 <FormField
                   control={form.control}
                   name="name"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel>Tên</FormLabel>
                       <FormControl>
-                        <Input placeholder="Category name" {...field} />
+                        <Input placeholder="Tên danh mục" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -195,13 +180,13 @@ export function EditCategoryDialog({
                 <FormField
                   control={form.control}
                   name="description"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Mô tả</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Category description"
+                          placeholder="Mô tả danh mục"
                           className="min-h-25"
                           {...field}
                         />
@@ -214,22 +199,22 @@ export function EditCategoryDialog({
                 <FormField
                   control={form.control}
                   name="parentId"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Parent Category (optional)</FormLabel>
+                      <FormLabel>Danh mục cha (tùy chọn)</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={busy}
+                        disabled={isPending}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select a parent category" />
+                            <SelectValue placeholder="Chọn danh mục cha" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {parentOptions.map((cat) => (
+                          {parentOptions?.map((cat) => (
                             <SelectItem key={cat.id} value={cat.id}>
                               {cat.name}
                             </SelectItem>
@@ -246,12 +231,14 @@ export function EditCategoryDialog({
                   name="isActive"
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-sm border p-3">
-                      <FormLabel className="cursor-pointer">Active</FormLabel>
+                      <FormLabel className="cursor-pointer">
+                        Kích hoạt
+                      </FormLabel>
                       <FormControl>
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
-                          disabled={busy}
+                          disabled={isPending}
                         />
                       </FormControl>
                     </FormItem>
@@ -264,15 +251,15 @@ export function EditCategoryDialog({
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
-                  disabled={busy}
+                  disabled={isPending}
                 >
-                  Cancel
+                  Hủy
                 </Button>
-                <Button type="submit" disabled={busy}>
-                  {busy && (
+                <Button type="submit" disabled={isPending}>
+                  {isPending && (
                     <LoaderCircle className="mr-2 size-4 animate-spin" />
                   )}
-                  Save Changes
+                  Lưu thay đổi
                 </Button>
               </DialogFooter>
             </form>

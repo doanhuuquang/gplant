@@ -1,12 +1,16 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
-import { useEffect, useMemo } from "react";
-
 import { Button } from "@/components/ui/button";
+import { CreateInventoryRequest } from "@/types/inventory";
+import { CreateInventoryRequestValidation } from "@/validations/inventory";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { useCreateInventory, useInventories } from "@/lib/hooks/use-inventory";
+import { useForm } from "react-hook-form";
+import { useMemo } from "react";
+import { usePlants } from "@/lib/hooks/use-plant";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -32,16 +36,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { useCreateInventory } from "@/hooks/inventory/use-create-inventory";
-import { usePlantStore } from "@/stores/plant-store";
 
-const createInventorySchema = z.object({
-  plantVariantId: z.string().min(1, "Please select a plant variant"),
-  quantityAvailable: z.number().int().min(0, "Quantity cannot be negative"),
-});
-
-type CreateInventoryFormValues = z.infer<typeof createInventorySchema>;
+type CreateInventoryFormValues = z.infer<
+  typeof CreateInventoryRequestValidation
+>;
 
 interface CreateInventoryDialogProps {
   open: boolean;
@@ -52,22 +50,28 @@ export function CreateInventoryDialog({
   open,
   onOpenChange,
 }: CreateInventoryDialogProps) {
-  const { handleCreateInventory, isLoading } = useCreateInventory();
-  const { plants, fetchPlants } = usePlantStore();
-
-  useEffect(() => {
-    if (open && !plants?.length) {
-      fetchPlants({ pageSize: 1000 });
-    }
-  }, [open, plants?.length, fetchPlants]);
+  const { mutate: createInventory, isPending } = useCreateInventory();
+  const { data } = usePlants();
+  const { data: inventoriesData } = useInventories();
 
   const plantsWithVariants = useMemo(
-    () => plants.filter((p) => p.variants?.length > 0),
-    [plants],
+    () =>
+      data?.data.items
+        .map((plant) => ({
+          ...plant,
+          variants: plant.variants.filter(
+            (variant) =>
+              !inventoriesData?.data.some(
+                (inventory) => inventory.plantVariantId === variant.id,
+              ),
+          ),
+        }))
+        .filter((plant) => plant.variants.length > 0),
+    [data, inventoriesData],
   );
 
   const form = useForm<CreateInventoryFormValues>({
-    resolver: zodResolver(createInventorySchema),
+    resolver: zodResolver(CreateInventoryRequestValidation),
     defaultValues: {
       plantVariantId: "",
       quantityAvailable: 0,
@@ -79,26 +83,26 @@ export function CreateInventoryDialog({
   };
 
   async function onSubmit(values: CreateInventoryFormValues) {
-    const success = await handleCreateInventory({
+    const request: CreateInventoryRequest = {
       plantVariantId: values.plantVariantId,
       quantityAvailable: values.quantityAvailable,
+    };
+
+    createInventory(request, {
+      onSuccess: () => {
+        resetForm();
+        onOpenChange(false);
+      },
     });
-
-    if (success) {
-      resetForm();
-      onOpenChange(false);
-    }
   }
-
-  const busy = isLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-125">
         <DialogHeader>
-          <DialogTitle>Create Inventory</DialogTitle>
+          <DialogTitle>Tạo tồn kho</DialogTitle>
           <DialogDescription>
-            Create a new inventory entry for a plant variant.
+            Tạo bản ghi tồn kho mới cho một biến thể cây.
           </DialogDescription>
         </DialogHeader>
 
@@ -107,37 +111,43 @@ export function CreateInventoryDialog({
             <FormField
               control={form.control}
               name="plantVariantId"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Plant Variant</FormLabel>
+                  <FormLabel>Biến thể cây</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    disabled={busy}
+                    disabled={isPending}
                   >
                     <FormControl>
                       <SelectTrigger className="w-full h-12! shadow-none rounded-sm">
-                        <SelectValue placeholder="Select a variant" />
+                        <SelectValue placeholder="Chọn biến thể" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="max-h-72">
-                      {plantsWithVariants.map((plant) => (
-                        <SelectGroup key={plant.id}>
-                          <SelectLabel className="text-xs text-muted-foreground">
-                            {plant.name}
-                          </SelectLabel>
-                          {plant.variants.map((variant) => (
-                            <SelectItem key={variant.id} value={variant.id}>
-                              {variant.sku} — Size {variant.size} —{" "}
-                              {new Intl.NumberFormat("vi-VN", {
-                                style: "currency",
-                                currency: "VND",
-                              }).format(variant.price)}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      ))}
+                      {plantsWithVariants?.length ? (
+                        plantsWithVariants.map((plant) => (
+                          <SelectGroup key={plant.id}>
+                            <SelectLabel className="text-xs text-muted-foreground">
+                              {plant.name}
+                            </SelectLabel>
+                            {plant.variants.map((variant) => (
+                              <SelectItem key={variant.id} value={variant.id}>
+                                {variant.sku} — Kích thước {variant.size} —{" "}
+                                {new Intl.NumberFormat("vi-VN", {
+                                  style: "currency",
+                                  currency: "VND",
+                                }).format(variant.price)}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          Không còn biến thể nào chưa có tồn kho.
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -148,10 +158,10 @@ export function CreateInventoryDialog({
             <FormField
               control={form.control}
               name="quantityAvailable"
-              disabled={busy}
+              disabled={isPending}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity Available</FormLabel>
+                  <FormLabel>Số lượng khả dụng</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -177,13 +187,15 @@ export function CreateInventoryDialog({
                   resetForm();
                   onOpenChange(false);
                 }}
-                disabled={busy}
+                disabled={isPending}
               >
-                Cancel
+                Hủy
               </Button>
-              <Button type="submit" disabled={busy}>
-                {busy && <LoaderCircle className="mr-2 size-4 animate-spin" />}
-                Create
+              <Button type="submit" disabled={isPending}>
+                {isPending && (
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
+                )}
+                Tạo
               </Button>
             </DialogFooter>
           </form>

@@ -1,12 +1,21 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
 import Image from "next/image";
-
+import { BannerGroup } from "@/lib/enums/banner-group";
 import { Button } from "@/components/ui/button";
+import { CreateBannerRequest } from "@/types/banner";
+import { CreateBannerRequestValidation } from "@/validations/banner";
+import { getFileUrl } from "@/utils/helpers";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { MediaPickerDialog } from "@/components/feature/media/media-picker-dialog";
+import { MediaResponse } from "@/types/media";
+import { Switch } from "@/components/ui/switch";
+import { useCreateBanner } from "@/lib/hooks/use-banner";
+import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -30,25 +39,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { useCreateBanner } from "@/hooks/banner/use-create-banner";
-import { BannerGroup } from "@/lib/enums/banner-group";
-import { MediaPickerDialog } from "@/components/shared/media-picker-dialog";
-import { useState } from "react";
-import { getFileUrl } from "@/utils/helpers";
-import MediaResponse from "@/lib/schemas/media/media-response";
 
-const createBannerSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  redirectUrl: z.string().min(1, "Redirect URL is required"),
-  group: z.string().min(1, "Group is required"),
-  orderIndex: z.number().int().positive().optional(),
-  isActive: z.boolean(),
-});
+const getGroupLabel = (group: BannerGroup) => {
+  if (group === BannerGroup.Carousel) return "Băng chuyền";
+  if (group === BannerGroup.HomePopup) return "Popup trang chủ";
+  return group;
+};
 
-type CreateBannerFormValues = z.infer<typeof createBannerSchema>;
+type CreateBannerFormValues = z.infer<typeof CreateBannerRequestValidation>;
 
 interface CreateBannerDialogProps {
   open: boolean;
@@ -59,56 +57,54 @@ export function CreateBannerDialog({
   open,
   onOpenChange,
 }: CreateBannerDialogProps) {
-  const { handleCreateBanner, isLoading } = useCreateBanner();
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<MediaResponse | null>(
     null,
   );
 
+  const { mutate: createBanner, isPending } = useCreateBanner();
+
   const form = useForm<CreateBannerFormValues>({
-    resolver: zodResolver(createBannerSchema),
+    resolver: zodResolver(CreateBannerRequestValidation),
     defaultValues: {
       title: "",
       description: "",
+      imageUrl: "",
       redirectUrl: "",
       group: BannerGroup.Carousel,
       isActive: true,
     },
   });
 
-  const resetForm = () => {
-    form.reset();
-    setSelectedMedia(null);
-  };
-
   async function onSubmit(values: CreateBannerFormValues) {
-    const success = await handleCreateBanner({
+    const request: CreateBannerRequest = {
       title: values.title,
       description: values.description,
-      imageUrl: selectedMedia ? getFileUrl(selectedMedia.fileUrl) : "",
+      imageUrl: values.imageUrl,
       redirectUrl: values.redirectUrl,
       group: values.group as BannerGroup,
       orderIndex: values.orderIndex,
       mediaId: selectedMedia?.id,
       isActive: values.isActive,
+    };
+
+    createBanner(request, {
+      onSuccess: () => {
+        form.reset();
+        setSelectedMedia(null);
+        onOpenChange(false);
+      },
     });
-
-    if (success) {
-      resetForm();
-      onOpenChange(false);
-    }
   }
-
-  const busy = isLoading;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-125 max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Create Banner</DialogTitle>
+            <DialogTitle>Tạo banner</DialogTitle>
             <DialogDescription>
-              Fill in the details below to create a new banner.
+              Điền thông tin bên dưới để tạo banner mới.
             </DialogDescription>
           </DialogHeader>
 
@@ -120,28 +116,24 @@ export function CreateBannerDialog({
               <div className="flex-1 overflow-y-auto space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {/* Media picker */}
                 <div className="space-y-2">
-                  <FormLabel>Image</FormLabel>
+                  <FormLabel>Hình ảnh</FormLabel>
                   <div
                     className="flex items-center gap-4 cursor-pointer"
                     onClick={() => setMediaPickerOpen(true)}
                   >
-                    {selectedMedia ? (
+                    {selectedMedia && (
                       <div className="relative h-20 w-32 overflow-hidden rounded-sm border">
                         <Image
                           src={getFileUrl(selectedMedia.fileUrl)}
-                          alt="Banner image"
+                          alt="Hình banner"
                           fill
                           className="object-cover"
                           unoptimized
                         />
                       </div>
-                    ) : (
-                      <div className="flex h-20 w-32 items-center justify-center rounded-sm border border-dashed text-muted-foreground text-sm">
-                        Select image
-                      </div>
                     )}
-                    <Button type="button" variant="outline" size="sm">
-                      {selectedMedia ? "Change" : "Browse"}
+                    <Button type="button" variant="outline">
+                      {selectedMedia ? "Đổi ảnh" : "Chọn ảnh"}
                     </Button>
                   </div>
                 </div>
@@ -149,12 +141,12 @@ export function CreateBannerDialog({
                 <FormField
                   control={form.control}
                   name="title"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Title</FormLabel>
+                      <FormLabel>Tiêu đề</FormLabel>
                       <FormControl>
-                        <Input placeholder="Banner title" {...field} />
+                        <Input placeholder="Tiêu đề banner" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -164,12 +156,12 @@ export function CreateBannerDialog({
                 <FormField
                   control={form.control}
                   name="description"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Mô tả</FormLabel>
                       <FormControl>
-                        <Input placeholder="Banner description" {...field} />
+                        <Input placeholder="Mô tả banner" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -179,10 +171,10 @@ export function CreateBannerDialog({
                 <FormField
                   control={form.control}
                   name="redirectUrl"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Redirect URL</FormLabel>
+                      <FormLabel>Liên kết chuyển hướng</FormLabel>
                       <FormControl>
                         <Input placeholder="https://example.com" {...field} />
                       </FormControl>
@@ -194,24 +186,24 @@ export function CreateBannerDialog({
                 <FormField
                   control={form.control}
                   name="group"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Group</FormLabel>
+                      <FormLabel>Nhóm</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        disabled={busy}
+                        disabled={isPending}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full h-12! shadow-none rounded-sm">
-                            <SelectValue placeholder="Select group" />
+                            <SelectValue placeholder="Chọn nhóm" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {Object.values(BannerGroup).map((group) => (
                             <SelectItem key={group} value={group}>
-                              {group}
+                              {getGroupLabel(group)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -224,14 +216,14 @@ export function CreateBannerDialog({
                 <FormField
                   control={form.control}
                   name="orderIndex"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Order Index (optional)</FormLabel>
+                      <FormLabel>Thứ tự hiển thị (tùy chọn)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Auto-assigned if empty"
+                          placeholder="Để trống để tự động sắp xếp"
                           {...field}
                           value={field.value ?? ""}
                           onChange={(e) => {
@@ -250,15 +242,17 @@ export function CreateBannerDialog({
                 <FormField
                   control={form.control}
                   name="isActive"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-sm border p-3">
-                      <FormLabel className="cursor-pointer">Active</FormLabel>
+                      <FormLabel className="cursor-pointer">
+                        Kích hoạt
+                      </FormLabel>
                       <FormControl>
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
-                          disabled={busy}
+                          disabled={isPending}
                         />
                       </FormControl>
                     </FormItem>
@@ -271,18 +265,22 @@ export function CreateBannerDialog({
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    resetForm();
+                    form.reset();
+                    setSelectedMedia(null);
                     onOpenChange(false);
                   }}
-                  disabled={busy}
+                  disabled={isPending}
                 >
-                  Cancel
+                  Hủy
                 </Button>
-                <Button type="submit" disabled={busy}>
-                  {busy && (
+                <Button
+                  type="submit"
+                  disabled={isPending || !form.formState.isValid}
+                >
+                  {isPending && (
                     <LoaderCircle className="mr-2 size-4 animate-spin" />
                   )}
-                  Create
+                  Tạo
                 </Button>
               </DialogFooter>
             </form>
@@ -295,6 +293,10 @@ export function CreateBannerDialog({
         onOpenChange={setMediaPickerOpen}
         onSelect={(media) => {
           setSelectedMedia(media);
+          form.setValue("imageUrl", getFileUrl(media.fileUrl), {
+            shouldValidate: true,
+          });
+          form.setValue("mediaId", media.id);
           setMediaPickerOpen(false);
         }}
         selectedMediaId={selectedMedia?.id}

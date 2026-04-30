@@ -1,8 +1,7 @@
 "use client";
 
-import PlantResponse from "@/lib/schemas/plant/plant-response";
-import { useDeletePlant } from "@/hooks/plant/use-delete-plant";
-
+import { PlantResponse } from "@/types/plant";
+import { useDeletePlant } from "@/lib/hooks/use-plant";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +15,8 @@ import {
 
 interface DeletePlantDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   plant: PlantResponse;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }
 
@@ -27,35 +26,35 @@ export function DeletePlantDialog({
   plant,
   onSuccess,
 }: DeletePlantDialogProps) {
-  const { handleDeletePlant, isLoading } = useDeletePlant();
+  const { mutate: deletePlant, isPending } = useDeletePlant();
 
-  const onConfirmDelete = async () => {
-    const success = await handleDeletePlant(plant.id);
-    if (success) {
-      onOpenChange(false);
-      onSuccess?.();
-    }
+  const handleDeletePlant = async () => {
+    deletePlant(plant.id, {
+      onSuccess: () => {
+        onOpenChange(false);
+        onSuccess?.();
+      },
+    });
   };
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete plant</AlertDialogTitle>
+          <AlertDialogTitle>Xóa cây</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete <strong>{plant.name}</strong>? This
-            will also delete all variants and images. This action cannot be
-            undone.
+            Bạn có chắc muốn xóa <strong>{plant.name}</strong>? Thao tác này sẽ
+            xóa toàn bộ biến thể và hình ảnh, và không thể hoàn tác.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirmDelete}
-            disabled={isLoading}
+            onClick={handleDeletePlant}
+            disabled={isPending}
             className="bg-destructive text-white hover:bg-destructive/90"
           >
-            {isLoading ? "Deleting..." : "Delete"}
+            {isPending ? "Đang xóa..." : "Xóa"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { ImagePlus, LoaderCircle, X } from "lucide-react";
 import Image from "next/image";
-import { getFileUrl } from "@/utils/helpers";
-
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { CreatePlantImageRequest, CreatePlantRequest } from "@/types/plant";
+import { CreatePlantRequestValidation } from "@/validations/plant";
+import { getFileUrl } from "@/utils/helpers";
+import { ImagePlus, LoaderCircle, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MediaPickerDialog } from "@/components/feature/media/media-picker-dialog";
+import { MediaResponse } from "@/types/media";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { useActiveCategories } from "@/lib/hooks/use-category";
+import { useCareInstructions } from "@/lib/hooks/use-care-instruction";
+import { useCreatePlant, useCreatePlantImage } from "@/lib/hooks/use-plant";
+import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -25,8 +35,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -34,27 +42,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useCreatePlant } from "@/hooks/plant/use-create-plant";
-import { useGetActiveCategories } from "@/hooks/category/use-get-active-categories";
-import { useGetCareInstructions } from "@/hooks/care-instruction/use-get-care-instructions";
-import { MediaPickerDialog } from "@/components/shared/media-picker-dialog";
-import MediaResponse from "@/lib/schemas/media/media-response";
-import { createPlantImageApi } from "@/services/plant-image-service";
-import { usePlantStore } from "@/stores/plant-store";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
-const createPlantSchema = z.object({
-  name: z.string().min(1, "Plant name is required"),
-  shortDescription: z.string().min(1, "Short description is required"),
-  description: z.string().min(1, "Description is required"),
-  categoryId: z.string().min(1, "Category is required"),
-  careInstructionId: z.string().min(1, "Care instruction is required"),
-  isActive: z.boolean(),
-});
-
-type CreatePlantFormValues = z.infer<typeof createPlantSchema>;
+type CreatePlantFormValues = z.infer<typeof CreatePlantRequestValidation>;
 
 interface CreatePlantDialogProps {
   open: boolean;
@@ -65,18 +54,18 @@ export function CreatePlantDialog({
   open,
   onOpenChange,
 }: CreatePlantDialogProps) {
-  const { handleCreatePlant, isLoading } = useCreatePlant();
-  const { activeCategories } = useGetActiveCategories();
-  const { careInstructions } = useGetCareInstructions();
-  const { fetchPlants } = usePlantStore();
-
   const [pendingImages, setPendingImages] = useState<
     { media: MediaResponse; isPrimary: boolean }[]
   >([]);
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
 
+  const { mutate: createPlant, isPending: isCreatingPlant } = useCreatePlant();
+  const { mutate: createPlantImage } = useCreatePlantImage();
+  const { data: activeCategoriesResponse } = useActiveCategories();
+  const { data: careInstructionsResponse } = useCareInstructions();
+
   const form = useForm<CreatePlantFormValues>({
-    resolver: zodResolver(createPlantSchema),
+    resolver: zodResolver(CreatePlantRequestValidation),
     defaultValues: {
       name: "",
       shortDescription: "",
@@ -117,47 +106,42 @@ export function CreatePlantDialog({
   };
 
   async function onSubmit(values: CreatePlantFormValues) {
-    const createdPlant = await handleCreatePlant({
+    const request: CreatePlantRequest = {
       name: values.name,
       shortDescription: values.shortDescription,
       description: values.description,
       categoryId: values.categoryId,
       careInstructionId: values.careInstructionId,
       isActive: values.isActive,
-    });
+    };
 
-    if (createdPlant) {
-      if (pendingImages.length > 0) {
-        try {
+    createPlant(request, {
+      onSuccess: (response) => {
+        resetForm();
+        onOpenChange(false);
+
+        if (pendingImages.length < 0) return;
+        else {
           for (const img of pendingImages) {
-            await createPlantImageApi({
-              plantId: createdPlant.id,
+            createPlantImage({
+              plantId: response.data.id,
               mediaId: img.media.id,
               isPrimary: img.isPrimary,
-            });
+            } as CreatePlantImageRequest);
           }
-        } catch {
-          toast.error("Image error", {
-            description: "Some images could not be added to the plant.",
-          });
         }
-        await fetchPlants();
-      }
-      resetForm();
-      onOpenChange(false);
-    }
+      },
+    });
   }
-
-  const busy = isLoading;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-150 max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Create Plant</DialogTitle>
+            <DialogTitle>Tạo cây</DialogTitle>
             <DialogDescription>
-              Fill in the details below to create a new plant.
+              Điền thông tin bên dưới để tạo cây mới.
             </DialogDescription>
           </DialogHeader>
 
@@ -170,12 +154,12 @@ export function CreatePlantDialog({
                 <FormField
                   control={form.control}
                   name="name"
-                  disabled={busy}
+                  disabled={isCreatingPlant}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel>Tên</FormLabel>
                       <FormControl>
-                        <Input placeholder="Plant name" {...field} />
+                        <Input placeholder="Tên cây" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -185,12 +169,12 @@ export function CreatePlantDialog({
                 <FormField
                   control={form.control}
                   name="shortDescription"
-                  disabled={busy}
+                  disabled={isCreatingPlant}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Short Description</FormLabel>
+                      <FormLabel>Mô tả ngắn</FormLabel>
                       <FormControl>
-                        <Input placeholder="Brief description" {...field} />
+                        <Input placeholder="Mô tả ngắn" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -200,13 +184,13 @@ export function CreatePlantDialog({
                 <FormField
                   control={form.control}
                   name="description"
-                  disabled={busy}
+                  disabled={isCreatingPlant}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Mô tả</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Full plant description"
+                          placeholder="Mô tả chi tiết cây"
                           className="min-h-25"
                           {...field}
                         />
@@ -219,22 +203,22 @@ export function CreatePlantDialog({
                 <FormField
                   control={form.control}
                   name="categoryId"
-                  disabled={busy}
+                  disabled={isCreatingPlant}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>Danh mục</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={busy}
+                        disabled={isCreatingPlant}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full h-12! shadow-none rounded-sm">
-                            <SelectValue placeholder="Select a category" />
+                            <SelectValue placeholder="Chọn danh mục" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {activeCategories.map((category) => (
+                          {activeCategoriesResponse?.data.map((category) => (
                             <SelectItem key={category.id} value={category.id}>
                               {category.name}
                             </SelectItem>
@@ -249,22 +233,22 @@ export function CreatePlantDialog({
                 <FormField
                   control={form.control}
                   name="careInstructionId"
-                  disabled={busy}
+                  disabled={isCreatingPlant}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Care Instruction</FormLabel>
+                      <FormLabel>Hướng dẫn chăm sóc</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={busy}
+                        disabled={isCreatingPlant}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full h-12! shadow-none rounded-sm">
-                            <SelectValue placeholder="Select a care instruction" />
+                            <SelectValue placeholder="Chọn hướng dẫn chăm sóc" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {careInstructions.map((ci) => (
+                          {careInstructionsResponse?.data.map((ci) => (
                             <SelectItem key={ci.id} value={ci.id}>
                               {ci.lightRequirement} / {ci.wateringFrequency}
                             </SelectItem>
@@ -280,34 +264,34 @@ export function CreatePlantDialog({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <FormLabel>Images</FormLabel>
+                      <FormLabel>Hình ảnh</FormLabel>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {pendingImages.length === 0
-                          ? "Add images for this plant"
-                          : `${pendingImages.length} image${pendingImages.length > 1 ? "s" : ""} selected`}
+                          ? "Thêm hình ảnh cho cây này"
+                          : `Đã chọn ${pendingImages.length} ảnh`}
                       </p>
                     </div>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={busy}
+                      disabled={isCreatingPlant}
                       onClick={() => setMediaPickerOpen(true)}
                     >
                       <ImagePlus className="size-4 mr-1.5" />
-                      Add
+                      Thêm
                     </Button>
                   </div>
 
                   {pendingImages.length === 0 ? (
                     <button
                       type="button"
-                      disabled={busy}
+                      disabled={isCreatingPlant}
                       onClick={() => setMediaPickerOpen(true)}
                       className="w-full rounded-sm border-2 border-dashed py-8 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                     >
                       <ImagePlus className="size-8 opacity-60" />
-                      <span className="text-sm">Click to browse media</span>
+                      <span className="text-sm">Nhấn để chọn media</span>
                     </button>
                   ) : (
                     <div className="rounded-sm border bg-muted/30 p-2">
@@ -333,7 +317,7 @@ export function CreatePlantDialog({
                             {img.isPrimary && (
                               <div className="absolute inset-x-0 bottom-0 bg-primary/90 px-2 py-0.5 text-center">
                                 <span className="text-[10px] font-semibold text-primary-foreground uppercase tracking-wider">
-                                  Primary
+                                  Chính
                                 </span>
                               </div>
                             )}
@@ -351,7 +335,7 @@ export function CreatePlantDialog({
                         ))}
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                        Click an image to set as primary
+                        Nhấn vào ảnh để đặt làm ảnh chính
                       </p>
                     </div>
                   )}
@@ -362,12 +346,14 @@ export function CreatePlantDialog({
                   name="isActive"
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-sm border p-3">
-                      <FormLabel className="cursor-pointer">Active</FormLabel>
+                      <FormLabel className="cursor-pointer">
+                        Kích hoạt
+                      </FormLabel>
                       <FormControl>
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
-                          disabled={busy}
+                          disabled={isCreatingPlant}
                         />
                       </FormControl>
                     </FormItem>
@@ -383,15 +369,15 @@ export function CreatePlantDialog({
                     resetForm();
                     onOpenChange(false);
                   }}
-                  disabled={busy}
+                  disabled={isCreatingPlant}
                 >
-                  Cancel
+                  Hủy
                 </Button>
-                <Button type="submit" disabled={busy}>
-                  {busy && (
+                <Button type="submit" disabled={isCreatingPlant}>
+                  {isCreatingPlant && (
                     <LoaderCircle className="mr-2 size-4 animate-spin" />
                   )}
-                  Create
+                  Tạo
                 </Button>
               </DialogFooter>
             </form>

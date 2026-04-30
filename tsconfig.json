@@ -30,7 +30,8 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     "app/[locale]/admin/categories-management",
-    "app/[locale]/(main)/shop/product"
+    "app/[locale]/(main)/shop/product",
+    "app/[locale]/(auth)/reset-password"
   ],
   "exclude": ["node_modules"]
 }

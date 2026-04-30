@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -11,7 +13,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import {
   Table,
   TableBody,
@@ -24,6 +25,7 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  isLoading?: boolean;
   globalFilter?: string;
   columnFilters?: ColumnFiltersState;
 }
@@ -31,6 +33,7 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
+  isLoading = false,
   globalFilter,
   columnFilters,
 }: DataTableProps<TData, TValue>) {
@@ -72,7 +75,15 @@ export function DataTable<TData, TValue>({
           ))}
         </TableHeader>
         <TableBody>
-          {table.getRowModel().rows?.length ? (
+          {isLoading ? (
+            <TableRow>
+              {Array.from({ length: columns.length }).map((_, index) => (
+                <TableCell key={index} className="h-24 text-center">
+                  <Skeleton className="w-full h-10" />
+                </TableCell>
+              ))}
+            </TableRow>
+          ) : table.getRowModel().rows?.length ? (
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}

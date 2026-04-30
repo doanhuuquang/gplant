@@ -1,8 +1,7 @@
 "use client";
 
-import InventoryResponse from "@/lib/schemas/inventory/inventory-response";
-import { useDeleteInventory } from "@/hooks/inventory/use-delete-inventory";
-
+import { InventoryResponse } from "@/types/inventory";
+import { useDeleteInventory } from "@/lib/hooks/use-inventory";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +15,8 @@ import {
 
 interface DeleteInventoryDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   inventory: InventoryResponse;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function DeleteInventoryDialog({
@@ -25,34 +24,33 @@ export function DeleteInventoryDialog({
   onOpenChange,
   inventory,
 }: DeleteInventoryDialogProps) {
-  const { handleDeleteInventory, isLoading } = useDeleteInventory();
+  const { mutate: deleteInventory, isPending } = useDeleteInventory();
 
   const onConfirmDelete = async () => {
-    const success = await handleDeleteInventory(inventory.id);
-    if (success) {
-      onOpenChange(false);
-    }
+    deleteInventory(inventory.id, {
+      onSuccess: () => onOpenChange(false),
+    });
   };
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete inventory</AlertDialogTitle>
+          <AlertDialogTitle>Xóa tồn kho</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete the inventory for{" "}
+            Bạn có chắc muốn xóa tồn kho của{" "}
             <strong>{inventory.plantVariant?.sku ?? inventory.id}</strong>? This
-            action cannot be undone.
+            hành động không thể hoàn tác.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirmDelete}
-            disabled={isLoading}
+            disabled={isPending}
             className="bg-destructive text-white hover:bg-destructive/90"
           >
-            {isLoading ? "Deleting..." : "Delete"}
+            {isPending ? "Đang xóa..." : "Xóa"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

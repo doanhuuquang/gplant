@@ -1,4 +1,5 @@
 "use client";
+import CheckoutHeader from "@/components/feature/checkout/checkout-header";
 import { Progress } from "@/components/ui/progress";
 import { APP_PATHS } from "@/lib/constants/app-paths";
 import { cn } from "@/lib/utils";
@@ -8,17 +9,17 @@ import { useEffect, useRef, useState } from "react";
 const steps: { url: string; label: string; stepNum: number }[] = [
   {
     url: APP_PATHS.SHOP_SHIPPING,
-    label: "Shipping address",
+    label: "Địa chỉ giao hàng",
     stepNum: 1,
   },
   {
     url: APP_PATHS.SHOP_REVIEW,
-    label: "Payment",
+    label: "Thanh toán",
     stepNum: 2,
   },
   {
     url: APP_PATHS.SHOP_ORDER_CONFIRMATION,
-    label: "Confirmation",
+    label: "Xác nhận",
     stepNum: 3,
   },
 ];
@@ -134,8 +135,9 @@ export default function CheckoutLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="w-full min-h-[70vh] space-y-4 py-10">
-      <div className="w-full max-w-350 mx-auto flex justify-center px-4">
+    <div className="w-full min-h-[70vh] space-y-4 pb-10">
+      <CheckoutHeader />
+      <div className="w-full max-w-350 mx-auto flex justify-center px-4 pt-10">
         <CheckoutSteps />
       </div>
       {children}

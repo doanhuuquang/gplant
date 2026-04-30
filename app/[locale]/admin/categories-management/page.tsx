@@ -5,20 +5,20 @@ import { CirclePlus, Search } from "lucide-react";
 import { columns } from "./columns";
 import { CreateCategoryDialog } from "./create-category-dialog";
 import { DataTable } from "@/components/ui/data-table";
-import { useGetCategories } from "@/hooks/category/use-get-categories";
+import { useAdminHeader } from "@/lib/hooks/use-admin-header";
+import { useCategories } from "@/lib/hooks/use-category";
 import { useMemo, useState } from "react";
-
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { useAdminHeader } from "@/hooks/use-admin-header";
 
 export default function CategoriesManagementPage() {
-  const { categories } = useGetCategories();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { data, isLoading } = useCategories();
 
   const headerActions = useMemo(
     () => (
@@ -26,7 +26,7 @@ export default function CategoriesManagementPage() {
         <div className="w-full max-w-xl flex items-center justify-between gap-2">
           <InputGroup className="w-full border-none bg-muted dark:bg-background">
             <InputGroupInput
-              placeholder="Search..."
+              placeholder="Tìm kiếm..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -54,7 +54,8 @@ export default function CategoriesManagementPage() {
     <>
       <DataTable
         columns={columns}
-        data={categories}
+        data={data?.data || []}
+        isLoading={isLoading}
         globalFilter={searchQuery}
       />
 

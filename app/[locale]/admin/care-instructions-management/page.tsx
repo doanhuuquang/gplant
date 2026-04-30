@@ -5,10 +5,9 @@ import { CirclePlus, Search } from "lucide-react";
 import { columns } from "./columns";
 import { CreateCareInstructionDialog } from "./create-care-instruction-dialog";
 import { DataTable } from "@/components/ui/data-table";
-import { useGetCareInstructions } from "@/hooks/care-instruction/use-get-care-instructions";
+import { useAdminHeader } from "@/lib/hooks/use-admin-header";
+import { useCareInstructions } from "@/lib/hooks/use-care-instruction";
 import { useMemo, useState } from "react";
-import { useAdminHeader } from "@/hooks/use-admin-header";
-
 import {
   InputGroup,
   InputGroupAddon,
@@ -16,16 +15,17 @@ import {
 } from "@/components/ui/input-group";
 
 export default function CareInstructionsManagementPage() {
-  const { careInstructions } = useGetCareInstructions();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { data, isLoading } = useCareInstructions();
 
   const headerActions = useMemo(
     () => (
       <>
         <InputGroup className="w-full max-w-xl border-transparent bg-muted dark:bg-background">
           <InputGroupInput
-            placeholder="Search..."
+            placeholder="Tìm kiếm..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -53,7 +53,8 @@ export default function CareInstructionsManagementPage() {
     <>
       <DataTable
         columns={columns}
-        data={careInstructions}
+        data={data?.data || []}
+        isLoading={isLoading}
         globalFilter={searchQuery}
       />
 

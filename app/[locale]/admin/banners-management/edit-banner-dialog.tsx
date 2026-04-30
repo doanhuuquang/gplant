@@ -1,12 +1,21 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { LoaderCircle } from "lucide-react";
 import Image from "next/image";
-
+import { BannerGroup } from "@/lib/enums/banner-group";
+import { BannerResponse, UpdateBannerRequest } from "@/types/banner";
 import { Button } from "@/components/ui/button";
+import { getFileUrl } from "@/utils/helpers";
+import { Input } from "@/components/ui/input";
+import { LoaderCircle } from "lucide-react";
+import { MediaPickerDialog } from "@/components/feature/media/media-picker-dialog";
+import { MediaResponse } from "@/types/media";
+import { Switch } from "@/components/ui/switch";
+import { UpdateBannerRequestValidation } from "@/validations/banner";
+import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { useUpdateBanner } from "@/lib/hooks/use-banner";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -30,30 +39,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { useUpdateBanner } from "@/hooks/banner/use-update-banner";
-import { BannerGroup } from "@/lib/enums/banner-group";
-import { MediaPickerDialog } from "@/components/shared/media-picker-dialog";
-import { useState } from "react";
-import { getFileUrl } from "@/utils/helpers";
-import MediaResponse from "@/lib/schemas/media/media-response";
-import BannerResponse from "@/lib/schemas/banner/banner-response";
 
-const editBannerSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  redirectUrl: z.string().min(1, "Redirect URL is required"),
-  group: z.string().min(1, "Group is required"),
-  orderIndex: z.number().int().positive().optional(),
-  isActive: z.boolean(),
-});
-
-type EditBannerFormValues = z.infer<typeof editBannerSchema>;
+const getGroupLabel = (group: BannerGroup) => {
+  if (group === BannerGroup.Carousel) return "Băng chuyền";
+  if (group === BannerGroup.HomePopup) return "Popup trang chủ";
+  return group;
+};
 
 interface EditBannerDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   banner: BannerResponse;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function EditBannerDialog({
@@ -61,48 +57,60 @@ export function EditBannerDialog({
   onOpenChange,
   banner,
 }: EditBannerDialogProps) {
-  const { handleUpdateBanner, isLoading } = useUpdateBanner();
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<MediaResponse | null>(
     banner.media ?? null,
   );
 
+  const { mutate: updateBanner, isPending } = useUpdateBanner();
+
+  type EditBannerFormValues = z.infer<typeof UpdateBannerRequestValidation>;
+
   const form = useForm<EditBannerFormValues>({
-    resolver: zodResolver(editBannerSchema),
+    resolver: zodResolver(UpdateBannerRequestValidation),
     defaultValues: {
       title: banner.title,
+      description: banner.description,
+      imageUrl: banner.media ? getFileUrl(banner.media.fileUrl) : "",
       redirectUrl: banner.redirectUrl,
       group: banner.group,
       orderIndex: banner.orderIndex,
+      mediaId: banner.media?.id,
       isActive: banner.isActive,
     },
   });
 
   async function onSubmit(values: EditBannerFormValues) {
-    const success = await handleUpdateBanner(banner.id, {
+    const request: UpdateBannerRequest = {
       title: values.title,
+      description: values.description,
+      imageUrl: values.imageUrl,
       redirectUrl: values.redirectUrl,
       group: values.group as BannerGroup,
       orderIndex: values.orderIndex,
       mediaId: selectedMedia?.id,
       isActive: values.isActive,
-    });
+    };
 
-    if (success) {
-      onOpenChange(false);
-    }
+    updateBanner(
+      {
+        id: banner.id,
+        request: request,
+      },
+      {
+        onSuccess: () => onOpenChange(false),
+      },
+    );
   }
-
-  const busy = isLoading;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-125 max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Edit Banner</DialogTitle>
+            <DialogTitle>Chỉnh sửa banner</DialogTitle>
             <DialogDescription>
-              Update the banner details below.
+              Cập nhật thông tin banner bên dưới.
             </DialogDescription>
           </DialogHeader>
 
@@ -114,28 +122,24 @@ export function EditBannerDialog({
               <div className="flex-1 overflow-y-auto space-y-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {/* Media picker */}
                 <div className="space-y-2">
-                  <FormLabel>Image</FormLabel>
+                  <FormLabel>Hình ảnh</FormLabel>
                   <div
                     className="flex items-center gap-4 cursor-pointer"
                     onClick={() => setMediaPickerOpen(true)}
                   >
-                    {selectedMedia ? (
+                    {selectedMedia && (
                       <div className="relative h-20 w-32 overflow-hidden rounded-sm border">
                         <Image
                           src={getFileUrl(selectedMedia.fileUrl)}
-                          alt="Banner image"
+                          alt="Hình banner"
                           fill
                           className="object-cover"
                           unoptimized
                         />
                       </div>
-                    ) : (
-                      <div className="flex h-20 w-32 items-center justify-center rounded-sm border border-dashed text-muted-foreground text-sm">
-                        Select image
-                      </div>
                     )}
-                    <Button type="button" variant="outline" size="sm">
-                      {selectedMedia ? "Change" : "Browse"}
+                    <Button type="button" variant="outline">
+                      {selectedMedia ? "Đổi ảnh" : "Chọn ảnh"}
                     </Button>
                   </div>
                 </div>
@@ -143,12 +147,27 @@ export function EditBannerDialog({
                 <FormField
                   control={form.control}
                   name="title"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Title</FormLabel>
+                      <FormLabel>Tiêu đề</FormLabel>
                       <FormControl>
-                        <Input placeholder="Banner title" {...field} />
+                        <Input placeholder="Tiêu đề banner" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  disabled={isPending}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mô tả</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Mô tả banner" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -158,10 +177,10 @@ export function EditBannerDialog({
                 <FormField
                   control={form.control}
                   name="redirectUrl"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Redirect URL</FormLabel>
+                      <FormLabel>Liên kết chuyển hướng</FormLabel>
                       <FormControl>
                         <Input placeholder="https://example.com" {...field} />
                       </FormControl>
@@ -173,24 +192,24 @@ export function EditBannerDialog({
                 <FormField
                   control={form.control}
                   name="group"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Group</FormLabel>
+                      <FormLabel>Nhóm</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        disabled={busy}
+                        disabled={isPending}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full h-12! shadow-none rounded-sm">
-                            <SelectValue placeholder="Select group" />
+                            <SelectValue placeholder="Chọn nhóm" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {Object.values(BannerGroup).map((group) => (
                             <SelectItem key={group} value={group}>
-                              {group}
+                              {getGroupLabel(group)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -203,14 +222,14 @@ export function EditBannerDialog({
                 <FormField
                   control={form.control}
                   name="orderIndex"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Order Index</FormLabel>
+                      <FormLabel>Thứ tự hiển thị</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Order position"
+                          placeholder="Vị trí hiển thị"
                           {...field}
                           value={field.value ?? ""}
                           onChange={(e) => {
@@ -229,15 +248,17 @@ export function EditBannerDialog({
                 <FormField
                   control={form.control}
                   name="isActive"
-                  disabled={busy}
+                  disabled={isPending}
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-sm border p-3">
-                      <FormLabel className="cursor-pointer">Active</FormLabel>
+                      <FormLabel className="cursor-pointer">
+                        Kích hoạt
+                      </FormLabel>
                       <FormControl>
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
-                          disabled={busy}
+                          disabled={isPending}
                         />
                       </FormControl>
                     </FormItem>
@@ -250,15 +271,18 @@ export function EditBannerDialog({
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
-                  disabled={busy}
+                  disabled={isPending}
                 >
-                  Cancel
+                  Hủy
                 </Button>
-                <Button type="submit" disabled={busy}>
-                  {busy && (
+                <Button
+                  type="submit"
+                  disabled={isPending || !form.formState.isValid}
+                >
+                  {isPending && (
                     <LoaderCircle className="mr-2 size-4 animate-spin" />
                   )}
-                  Save
+                  Lưu
                 </Button>
               </DialogFooter>
             </form>
@@ -271,6 +295,10 @@ export function EditBannerDialog({
         onOpenChange={setMediaPickerOpen}
         onSelect={(media) => {
           setSelectedMedia(media);
+          form.setValue("imageUrl", getFileUrl(media.fileUrl), {
+            shouldValidate: true,
+          });
+          form.setValue("mediaId", media.id);
           setMediaPickerOpen(false);
         }}
         selectedMediaId={selectedMedia?.id}

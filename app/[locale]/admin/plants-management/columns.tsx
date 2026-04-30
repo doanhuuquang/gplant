@@ -1,15 +1,14 @@
 "use client";
 
-import PlantResponse from "@/lib/schemas/plant/plant-response";
 import Link from "next/link";
 import { APP_PATHS } from "@/lib/constants/app-paths";
 import { ArrowUpDown, ExternalLink, SquarePen, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ColumnDef, Row } from "@tanstack/react-table";
+import { PlantResponse } from "@/types/plant";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
-import { useToggleActivePlant } from "@/hooks/plant/use-toggle-active-plant";
-
+import { useToggleActivePlantVariant } from "@/lib/hooks/use-plant";
 import {
   Tooltip,
   TooltipContent,
@@ -19,11 +18,11 @@ import { EditPlantDialog } from "@/app/[locale]/admin/plants-management/edit-pla
 import { DeletePlantDialog } from "@/app/[locale]/admin/plants-management/delete-plant-dialog";
 
 function ActiveSwitchCell({ row }: { row: Row<PlantResponse> }) {
-  const { handleToggleActivePlant } = useToggleActivePlant();
+  const { mutate: toggleActivePlant } = useToggleActivePlantVariant();
   return (
     <Switch
       defaultChecked={row.original.isActive}
-      onCheckedChange={() => handleToggleActivePlant(row.original.id)}
+      onCheckedChange={() => toggleActivePlant(row.original.id)}
     />
   );
 }
@@ -67,7 +66,7 @@ function ActionsCell({ row }: { row: Row<PlantResponse> }) {
           </Link>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Details</p>
+          <p>Chi tiết</p>
         </TooltipContent>
       </Tooltip>
 
@@ -82,7 +81,7 @@ function ActionsCell({ row }: { row: Row<PlantResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Edit</p>
+          <p>Chỉnh sửa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -97,7 +96,7 @@ function ActionsCell({ row }: { row: Row<PlantResponse> }) {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Delete</p>
+          <p>Xóa</p>
         </TooltipContent>
       </Tooltip>
 
@@ -123,7 +122,7 @@ export const columns: ColumnDef<PlantResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Plant Name
+          Tên cây
           <Button
             variant="ghost"
             size={"icon"}
@@ -138,7 +137,10 @@ export const columns: ColumnDef<PlantResponse>[] = [
   },
   {
     accessorKey: "shortDescription",
-    header: "Short Description",
+    header: "Mô tả ngắn",
+    cell: ({ row }) => (
+      <p className="truncate max-w-25">{row.original.shortDescription}</p>
+    ),
   },
   {
     id: "categoryName",
@@ -146,7 +148,7 @@ export const columns: ColumnDef<PlantResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Category
+          Danh mục
           <Button
             variant="ghost"
             size={"icon"}
@@ -161,7 +163,7 @@ export const columns: ColumnDef<PlantResponse>[] = [
   },
   {
     id: "priceRange",
-    header: "Price Range",
+    header: "Khoảng giá",
     cell: ({ row }) => <PriceRangeCell row={row} />,
   },
   {
@@ -169,7 +171,7 @@ export const columns: ColumnDef<PlantResponse>[] = [
     header: ({ column }) => {
       return (
         <>
-          Created At
+          Ngày tạo
           <Button
             variant="ghost"
             size={"icon"}
@@ -194,12 +196,12 @@ export const columns: ColumnDef<PlantResponse>[] = [
   },
   {
     accessorKey: "isActive",
-    header: "Active",
+    header: "Kích hoạt",
     cell: ({ row }) => <ActiveSwitchCell row={row} />,
   },
   {
     id: "actions",
-    header: "Actions",
+    header: "Thao tác",
     cell: ({ row }) => <ActionsCell row={row} />,
   },
 ];

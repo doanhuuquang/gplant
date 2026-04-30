@@ -1,5 +1,5 @@
-import AppFooter from "@/components/shared/app-footer";
-import AppHeader from "@/components/shared/app-header";
+import AppFooter from "@/components/common/app-footer";
+import AppHeader from "@/components/common/app-header";
 import { AppHeaderProvider } from "@/contexts/app-header-context";
 
 export default function MainLayout({
